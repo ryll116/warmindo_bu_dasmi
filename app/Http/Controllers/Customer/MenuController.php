@@ -24,7 +24,7 @@ class MenuController extends Controller
         $search = trim($request->validated('search') ?? '');
         $categoryId = $request->validated('category');
         $availableProducts = Product::where('is_available', true)
-            ->whereHas('category', fn (Builder $query) => $query->where('status', 'active'));
+            ->whereHas('category', fn (Builder $query) => $query->where(fn (Builder $query): Builder => $query->where('status', 'active')->orWhereNull('status')));
 
         $products = (clone $availableProducts)
             ->when($search !== '', fn (Builder $query) => $query->whereLike('product_name', '%'.$search.'%'))
@@ -32,7 +32,7 @@ class MenuController extends Controller
             ->orderBy('product_name')->orderBy('id')
             ->get(['id', 'category_id', 'product_name', 'price']);
 
-        $categories = Category::where('status', 'active')
+        $categories = Category::where(fn (Builder $query): Builder => $query->where('status', 'active')->orWhereNull('status'))
             ->whereHas('products', fn (Builder $query) => $query->where('is_available', true))
             ->orderBy('category_name')->get(['id', 'category_name']);
 

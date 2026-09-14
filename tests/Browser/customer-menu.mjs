@@ -77,7 +77,11 @@ try {
         await navigate(origin + '/menu/valid-menu-token');
         await evaluate('localStorage.clear(); window.dispatchEvent(new StorageEvent("storage", {key: null})); document.querySelector(".menu-product .increase").click(); document.querySelector(".menu-product .increase").click();');
         assert.equal(await evaluate('document.getElementById("cart-count").textContent'), '2 item');
-        assert.equal(await evaluate('document.getElementById("cart-total").textContent'), 'Rp 30.000');
+        assert.equal(await evaluate('document.getElementById("cart-total").textContent'), 'Rp30.000');
+        assert.deepEqual(await evaluate('JSON.parse(localStorage.getItem("warmindo:cart:v1:valid-menu-token"))'), {
+            version: 2,
+            items: { '1': { product_id: 1, product_name: 'Indomie Goreng Telur Spesial 1', price: '15000.00', quantity: 2, subtotal: '30000.00' } },
+        });
         const layout = await evaluate(`(() => {
             const side = document.querySelector(".category-sidebar").getBoundingClientRect();
             const grid = document.querySelector(".product-grid").getBoundingClientRect();
@@ -95,7 +99,9 @@ try {
         const drawerBounds = await evaluate(`(() => { const r = document.getElementById("cart-drawer").getBoundingClientRect(); return {left:r.left,right:r.right,top:r.top,bottom:r.bottom}; })()`);
         assert.ok(drawerBounds.left >= 0 && drawerBounds.right <= width + 1 && drawerBounds.top >= 0 && drawerBounds.bottom <= 901);
         await evaluate('document.querySelector("#cart-items .increase").click()');
-        assert.equal(await evaluate('document.getElementById("drawer-total").textContent'), 'Rp 45.000');
+        assert.equal(await evaluate('document.getElementById("drawer-total").textContent'), 'Rp45.000');
+        assert.equal(await evaluate('document.querySelector(".menu-product output").textContent'), '3');
+        assert.equal(await evaluate('document.querySelector("#cart-items .cart-line-total").textContent'), 'Rp45.000');
         await evaluate('document.querySelector("#cart-items .decrease").click(); document.querySelector("#cart-drawer .btn-close").click()');
         await until(() => evaluate('!document.getElementById("cart-drawer").classList.contains("show")'), 'Drawer did not close');
         await evaluate('window.scrollTo(0, document.body.scrollHeight)');
@@ -111,10 +117,19 @@ try {
     await evaluate('document.getElementById("open-cart").click()');
     await until(() => evaluate('document.getElementById("cart-drawer").classList.contains("show")'), 'Drawer did not open after filter');
     assert.ok(await evaluate('document.getElementById("cart-items").textContent.includes("Indomie")'), 'Filtered-out cart product disappeared');
+    await evaluate('document.querySelector(".menu-product .increase").click()');
+    assert.equal(await evaluate('document.getElementById("cart-count").textContent'), '3 item');
+    assert.equal(await evaluate('document.getElementById("drawer-total").textContent'), 'Rp45.000');
+    await evaluate('document.querySelector(".menu-product .decrease").click()');
     await navigate(origin + '/menu/other-menu-token');
     assert.equal(await evaluate('document.getElementById("cart-bar").hidden'), true, 'Cart leaked between tables');
     await navigate(origin + '/menu/valid-menu-token');
     assert.equal(await evaluate('document.getElementById("cart-count").textContent'), '2 item');
+    assert.equal(await evaluate('JSON.parse(localStorage.getItem("warmindo:cart:v1:valid-menu-token")).version'), 2, 'Legacy cart was not upgraded');
+    await evaluate(`localStorage.setItem("warmindo:cart:v1:valid-menu-token", JSON.stringify({version:2,items:{"1":{quantity:2,product_name:"Wrong name",price:"1.00",subtotal:"2.00"},"2":{quantity:-1},"3":{quantity:1.5},"4":null,"9999":{quantity:2}}}))`);
+    await navigate(origin + '/menu/valid-menu-token');
+    assert.equal(await evaluate('document.getElementById("cart-total").textContent'), 'Rp30.000', 'Stored price must use the current catalog');
+    assert.equal(await evaluate('JSON.parse(localStorage.getItem("warmindo:cart:v1:valid-menu-token")).items[1].product_name'), 'Indomie Goreng Telur Spesial 1');
     await evaluate('document.querySelector(".menu-product .decrease").click(); document.querySelector(".menu-product .decrease").click()');
     assert.equal(await evaluate('document.getElementById("cart-bar").hidden'), true);
     assert.equal(await evaluate('document.querySelector(".menu-product output").textContent'), '0');
@@ -125,7 +140,7 @@ try {
     await navigate(origin + '/menu/valid-menu-token');
     assert.equal(await evaluate('document.getElementById("cart-bar").hidden'), true);
     await evaluate('document.querySelectorAll(".menu-product .increase")[5].click(); document.querySelectorAll(".menu-product .increase")[5].click()');
-    assert.equal(await evaluate('document.getElementById("cart-total").textContent'), 'Rp 35.001', 'Fractional prices must sum exactly');
+    assert.equal(await evaluate('document.getElementById("cart-total").textContent'), 'Rp35.001', 'Fractional prices must sum exactly');
     await evaluate('document.getElementById("open-cart").click()');
     await until(() => evaluate('document.getElementById("cart-drawer").classList.contains("show")'), 'Drawer did not open for removal');
     await evaluate('document.querySelector("#cart-items .decrease").click(); document.querySelector("#cart-items .decrease").click()');

@@ -15,7 +15,7 @@
 
     function money(cents) {
         const fraction = cents % 100n;
-        return `Rp ${numberFormat.format(cents / 100n)}${fraction ? ',' + fraction.toString().padStart(2, '0') : ''}`;
+        return `Rp${numberFormat.format(cents / 100n)}${fraction ? ',' + fraction.toString().padStart(2, '0') : ''}`;
     }
 
     function price(id) {
@@ -25,8 +25,9 @@
 
     function normalize(raw) {
         const result = {};
-        if (!raw || raw.version !== 1 || !raw.items || typeof raw.items !== 'object') return result;
-        for (const [id, quantity] of Object.entries(raw.items)) {
+        if (!raw || ![1, 2].includes(raw.version) || !raw.items || typeof raw.items !== 'object' || Array.isArray(raw.items)) return result;
+        for (const [id, item] of Object.entries(raw.items)) {
+            const quantity = raw.version === 1 ? item : item?.quantity;
             if (/^[1-9]\d*$/.test(id) && Object.hasOwn(catalog, id) && Number.isInteger(quantity) && quantity > 0) {
                 result[id] = Math.min(limit, quantity);
             }
@@ -44,9 +45,21 @@
 
     let cart = load();
 
+    function decimal(cents) {
+        return `${cents / 100n}.${(cents % 100n).toString().padStart(2, '0')}`;
+    }
+
     function persist() {
         try {
-            localStorage.setItem(storageKey, JSON.stringify({ version: 1, items: cart }));
+            const items = Object.fromEntries(Object.entries(cart).map(([id, quantity]) => [id, {
+                product_id: Number(id),
+                product_name: catalog[id].name,
+                price: decimal(price(id)),
+                quantity,
+                subtotal: decimal(price(id) * BigInt(quantity)),
+            }]));
+            localStorage.setItem(storageKey, JSON.stringify({ version: 2, items }));
+            storageAvailable = true;
         } catch {
             storageAvailable = false;
             feedback.textContent = 'Penyimpanan browser tidak tersedia. Keranjang hanya bertahan di halaman ini.';
@@ -132,7 +145,8 @@
 
     document.addEventListener('click', event => {
         const button = event.target.closest('[data-cart-action]');
-        if (!button || button.disabled || !Object.hasOwn(catalog, button.dataset.id)) return;
+        if (!button || button.disabled || !Object.hasOwn(catalog, button.dataset.id)
+            || !['increase', 'decrease'].includes(button.dataset.cartAction)) return;
         const id = button.dataset.id;
         const count = Math.max(0, Math.min(limit, (cart[id] || 0) + (button.dataset.cartAction === 'increase' ? 1 : -1)));
         if (count) cart[id] = count;

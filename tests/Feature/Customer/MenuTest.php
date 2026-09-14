@@ -9,7 +9,7 @@ use Tests\Feature\Admin\AdminDatabaseTestCase;
 
 class MenuTest extends AdminDatabaseTestCase
 {
-    public function test_valid_token_shows_only_available_products_from_active_categories(): void
+    public function test_valid_token_shows_available_products_from_active_and_unset_categories(): void
     {
         $table = Table::factory()->create(['table_no' => 5]);
         $shown = Product::factory()->create(['product_name' => 'Indomie Goreng', 'price' => '15000.00']);
@@ -17,13 +17,17 @@ class MenuTest extends AdminDatabaseTestCase
         $inactive = Category::factory()->create(['status' => 'inactive']);
         Product::factory()->create(['category_id' => $inactive->id, 'product_name' => 'Kategori nonaktif']);
         $legacy = Category::factory()->create(['status' => null]);
-        Product::factory()->create(['category_id' => $legacy->id, 'product_name' => 'Kategori belum diatur']);
+        $legacyProduct = Product::factory()->create(['category_id' => $legacy->id, 'product_name' => 'Kategori belum diatur']);
+        Product::factory()->create(['category_id' => $legacy->id, 'product_name' => 'Produk legacy habis', 'is_available' => false]);
 
         $this->get(route('customer.menu', $table->qr_token))->assertOk()
             ->assertSee('Meja 05')->assertSee('Indomie Goreng')->assertSee('Rp 15.000')
             ->assertSee('images/product-placeholder.svg')->assertSee('category-sidebar')
-            ->assertDontSee('Produk habis')->assertDontSee('Kategori nonaktif')->assertDontSee('Kategori belum diatur')
-            ->assertViewHas('products', fn ($products) => $products->pluck('id')->all() === [$shown->id]);
+            ->assertDontSee('Produk habis')->assertDontSee('Kategori nonaktif')->assertDontSee('Produk legacy habis')
+            ->assertSee('Kategori belum diatur')->assertSee($legacy->category_name)
+            ->assertViewHas('products', fn ($products) => $products->pluck('id')->all() === [$shown->id, $legacyProduct->id])
+            ->assertViewHas('categories', fn ($categories) => $categories->modelKeys() === Category::whereIn('id', [$shown->category_id, $legacy->id])->orderBy('category_name')->pluck('id')->all())
+            ->assertViewHas('catalog', fn ($catalog) => $catalog->count() === 2 && $catalog->has($legacyProduct->id));
         $this->assertDatabaseCount('orders', 0);
         $this->assertDatabaseCount('order_items', 0);
     }
@@ -40,7 +44,7 @@ class MenuTest extends AdminDatabaseTestCase
     public function test_search_and_category_are_combined_and_catalog_keeps_other_available_items(): void
     {
         $table = Table::factory()->create();
-        $mie = Category::factory()->create(['category_name' => 'Mie']);
+        $mie = Category::factory()->create(['category_name' => 'Mie', 'status' => null]);
         $other = Category::factory()->create(['category_name' => 'Nasi']);
         $match = Product::factory()->create(['category_id' => $mie->id, 'product_name' => 'Mie Goreng']);
         $excluded = Product::factory()->create(['category_id' => $mie->id, 'product_name' => 'Mie Rebus']);
