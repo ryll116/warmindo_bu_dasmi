@@ -12,7 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('orders', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();
+            $table->foreignId('table_id')->constrained('tables');
+            $table->string('order_status', 50)->default('pending');
+            $table->string('payment_type', 50)->nullable();
+            $table->string('payment_status', 50)->default('unpaid');
+            $table->decimal('total', 20, 2)->default(0);
+            $table->dateTime('payment_time')->nullable();
             $table->timestamps();
         });
     }
