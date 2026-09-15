@@ -36,10 +36,11 @@ class MenuController extends Controller
             ->whereHas('products', fn (Builder $query) => $query->where('is_available', true))
             ->orderBy('category_name')->get(['id', 'category_name']);
 
-        $catalog = (clone $availableProducts)->get(['id', 'product_name', 'price'])
+        $catalog = (clone $availableProducts)->get(['id', 'category_id', 'product_name', 'price'])
             ->mapWithKeys(fn (Product $product) => [
                 $product->id => [
                     'name' => $product->product_name,
+                    'category_id' => $product->category_id,
                     'price' => $product->price,
                 ],
             ]);

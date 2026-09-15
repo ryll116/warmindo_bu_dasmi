@@ -18,10 +18,11 @@
                     <input type="hidden" name="category" value="{{ $categoryId }}">
                 @endif
                 <label for="menu-search" class="visually-hidden">Cari makanan atau minuman</label>
-                <input type="search" id="menu-search" name="search" value="{{ $search }}" maxlength="255" placeholder="Cari makanan atau minuman..." autocomplete="off" class="form-control">
+                <input type="search" id="menu-search" name="search" value="{{ $search }}" maxlength="255" placeholder="Cari makanan atau minuman..." autocomplete="off" class="form-control" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="menu-suggestions">
                 <button type="submit" class="btn search-button" aria-label="Cari produk">
                     <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg>
                 </button>
+                <div id="menu-suggestions" class="menu-suggestions" role="listbox" aria-label="Saran menu" data-placeholder="{{ asset('images/product-placeholder.svg') }}" hidden></div>
             </form>
         </div>
     </header>
@@ -100,6 +101,11 @@
         </div>
         <div class="cart-footer" id="cart-footer" hidden>
             <div class="cart-grand-total"><span>Total</span><strong id="drawer-total">Rp 0</strong></div>
+            <form id="checkout-start" method="POST" action="{{ route('customer.checkout.review', $table->qr_token) }}" class="mt-3">
+                @csrf
+                <div id="checkout-items" hidden></div>
+                <button type="submit" class="btn btn-dark w-100">Lanjutkan Pesanan</button>
+            </form>
             <button type="button" class="btn btn-outline-dark w-100 mt-3" data-bs-dismiss="offcanvas">Tambah menu lainnya</button>
         </div>
     </section>
@@ -108,4 +114,6 @@
 @push('scripts')
     <script>window.warmindoMenu = {{ Illuminate\Support\Js::from(['token' => $table->qr_token, 'catalog' => $catalog]) }};</script>
     <script src="{{ asset('js/customer-menu.js') }}" defer></script>
+    <script src="{{ asset('js/customer-search.js') }}" defer></script>
+    <script src="{{ asset('js/customer-checkout.js') }}" defer></script>
 @endpush

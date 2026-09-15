@@ -176,4 +176,24 @@
 
     persist();
     render();
+
+    document.getElementById('checkout-start')?.addEventListener('submit', event => {
+        const container = document.getElementById('checkout-items');
+        container.replaceChildren();
+        const items = Object.entries(cart);
+        if (!items.length) {
+            event.preventDefault();
+            feedback.textContent = 'Keranjang masih kosong. Tambahkan menu terlebih dahulu.';
+            return;
+        }
+        items.forEach(([id, quantity], index) => {
+            for (const [field, value] of Object.entries({ product_id: id, quantity })) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = `items[${index}][${field}]`;
+                input.value = value;
+                container.append(input);
+            }
+        });
+    });
 })();
