@@ -61,6 +61,7 @@ class CheckoutController extends Controller
 
                 $lines = $this->lines($draft['items'], true);
                 $order = new Order;
+                $order->customer_name = $request->validated('customer_name');
                 $order->id = $token;
                 $order->table()->associate($table);
                 $order->save();

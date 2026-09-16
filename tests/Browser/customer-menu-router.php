@@ -62,6 +62,7 @@ if (! Schema::hasTable('tables')) {
     Schema::create('orders', function (Blueprint $table): void {
         $table->uuid('id')->primary();
         $table->foreignId('table_id')->constrained();
+        $table->string('customer_name', 100)->nullable();
         $table->string('order_status')->default('pending');
         $table->string('payment_status')->default('unpaid');
         $table->string('payment_type')->nullable();

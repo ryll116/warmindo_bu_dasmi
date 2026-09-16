@@ -180,7 +180,7 @@ try {
     assert.ok(await evaluate('document.body.textContent.includes("Rp15.000")'));
     assert.ok(await evaluate('localStorage.getItem("warmindo:cart:v1:valid-menu-token") !== null'), 'Review cleared cart');
     const reviewUrl = await evaluate('location.href');
-    await evaluate('document.getElementById("order-notes").value = "Tidak pedas"; document.querySelector("#checkout-submit button").click()');
+    await evaluate('document.getElementById("customer-name").value = "Evan"; document.getElementById("order-notes").value = "Tidak pedas"; document.getElementById("customer-name").value = "Evan"; document.querySelector("#checkout-submit button").click()');
     await until(() => evaluate('document.readyState === "complete" && !!document.getElementById("checkout-success")'), 'Checkout success did not load');
     assert.ok(await evaluate('document.body.textContent.includes("pending") && document.body.textContent.includes("unpaid")'));
     assert.equal(await evaluate('localStorage.getItem("warmindo:cart:v1:valid-menu-token")'), null, 'Successful checkout did not clear cart');
@@ -191,10 +191,71 @@ try {
     await navigate(successUrl, false);
     assert.ok(await evaluate('localStorage.getItem("warmindo:cart:v1:valid-menu-token") !== null'), 'Reopening success erased a new cart');
     await navigate(reviewUrl, false);
-    await evaluate('document.querySelector("#checkout-submit button").click()');
+    await evaluate('document.getElementById("customer-name").value = "Evan"; document.querySelector("#checkout-submit button").click()');
     await until(() => evaluate('document.readyState === "complete" && !!document.getElementById("checkout-success")'), 'Retry did not return success');
     assert.ok(await evaluate('localStorage.getItem("warmindo:cart:v1:valid-menu-token") !== null'), 'Retry of an old order erased a new cart');
     console.log('PASS checkout review, notes, success, cart clearing, success revisit and retry');
+    await navigate(origin + '/admin/orders', false);
+    await until(() => evaluate('!!document.getElementById("orders-list")'), 'Cashier list missing');
+    for (const width of [390, 768, 1440]) {
+        await cdp('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width === 390 });
+        assert.ok(await evaluate('document.documentElement.scrollWidth <= innerWidth'), 'Cashier overflow at ' + width);
+    }
+    await until(() => evaluate('document.getElementById("orders-refresh-status").textContent.startsWith("Diperbarui ") && !document.getElementById("orders-refresh-status").textContent.includes("otomatis setiap")'), 'Cashier polling did not refresh');
+    await evaluate('document.querySelector("#orders-list a.btn").click()');
+    await until(() => evaluate('document.readyState === "complete" && document.body.textContent.includes("Konfirmasi Pesanan")'), 'Cashier detail missing');
+    assert.ok(await evaluate('document.body.textContent.includes("Nama Pemesan: Evan")'));
+    await evaluate('document.querySelector("button[data-bs-target=\\"#add-order-menu\\"]").click()');
+    await until(() => evaluate('document.getElementById("add-order-menu").classList.contains("show")'), 'Add menu modal missing');
+    await evaluate('document.getElementById("add-menu-search").value = "Segar"; document.getElementById("add-menu-search").dispatchEvent(new Event("input")); document.getElementById("add-menu-product").value = "7"; document.getElementById("add-menu-quantity").value = "2"; document.querySelector("#add-order-menu button[type=submit]").click()');
+    await until(() => evaluate('document.readyState === "complete" && document.body.textContent.includes("Total Rp45.000")'), 'Added item did not update total');
+    for (const [next, label] of [['confirmed', 'Mulai Proses'], ['processing', 'Selesaikan Pesanan']]) {
+        await evaluate('document.querySelector("input[name=order_status]").form.querySelector("button[type=submit]").click()');
+        await until(() => evaluate('document.readyState === "complete" && document.body.textContent.includes(' + JSON.stringify(label) + ')'), 'Status did not advance to ' + next);
+    }
+    await evaluate('document.querySelector("button.btn-success[data-bs-target]").click()');
+    await until(() => evaluate('document.getElementById("payment-confirmation").classList.contains("show")'), 'Payment modal missing');
+    await evaluate('document.getElementById("payment-type").value = "qris_manual"; document.querySelector("#payment-confirmation button[type=submit]").click()');
+    await until(() => evaluate('document.readyState === "complete" && !document.getElementById("payment-confirmation") && document.body.textContent.includes("PAID")'), 'Payment did not become paid');
+    await evaluate('document.querySelector("input[name=order_status]").form.querySelector("button[type=submit]").click()');
+    await until(() => evaluate('document.readyState === "complete" && document.body.textContent.includes("Completed")'), 'Order not completed');
+    await navigate(origin + '/admin/orders', false);
+    assert.equal(await evaluate('document.querySelectorAll("#orders-list article").length'), 0);
+    await navigate(origin + '/admin/orders?tab=completed', false);
+    assert.equal(await evaluate('document.querySelectorAll("#orders-list article").length'), 1);
+    console.log('PASS cashier polling, responsive layout, detail, status flow, manual QRIS payment and completed tab');
+    assert.equal(await evaluate('document.querySelectorAll("#order-notifications .toast").length'), 0, 'Old orders triggered a toast');
+    const newOrderIds = await evaluate(`(async () => {
+        const ids = [];
+        const menu = await (await fetch('/menu/valid-menu-token')).text();
+        const csrf = new DOMParser().parseFromString(menu, 'text/html').querySelector('#checkout-start input[name="_token"]').value;
+        for (let count = 0; count < 2; count++) {
+            const review = await fetch('/menu/valid-menu-token/checkout/review', {method:'POST', body: new URLSearchParams({_token:csrf, 'items[0][product_id]':'1', 'items[0][quantity]':'3'})});
+            const document = new DOMParser().parseFromString(await review.text(), 'text/html');
+            const token = document.querySelector('input[name="checkout_token"]').value;
+            const result = await fetch('/menu/valid-menu-token/checkout', {method:'POST', body:new URLSearchParams({_token:csrf, checkout_token:token, customer_name:"Evan"})});
+            if (!result.ok || !result.url.includes('/success')) throw new Error('Notification fixture checkout failed');
+            ids.push(token);
+        }
+        window.dispatchEvent(new Event('focus'));
+        window.document.dispatchEvent(new Event('visibilitychange'));
+        return ids;
+    })()`);
+    await until(() => evaluate('!!document.querySelector("#order-notifications .toast.show")'), 'New order toast did not appear');
+    assert.equal(await evaluate('document.querySelectorAll("#order-notifications .toast").length'), 1, 'Toasts should queue');
+    assert.ok(await evaluate('document.getElementById("order-notifications").textContent.includes("Meja 05") && document.getElementById("order-notifications").textContent.includes("3 item • Rp45.000")'));
+    assert.ok(newOrderIds.includes(await evaluate('document.querySelector("#order-notifications .toast").dataset.orderId')));
+    const firstToast = await evaluate('document.querySelector("#order-notifications .toast").dataset.orderId');
+    await evaluate('document.querySelector("#order-notifications .btn-close").click()');
+    await until(() => evaluate('!!document.querySelector("#order-notifications .toast.show") && document.querySelector("#order-notifications .toast").dataset.orderId !== ' + JSON.stringify(firstToast)), 'Queued toast did not appear');
+    assert.ok(await evaluate('document.getElementById("order-notifications").textContent.includes("Evan")'));
+    await cdp('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+    assert.ok(await evaluate('(() => { const r = document.querySelector("#order-notifications .toast").getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth; })()'), 'Toast overflows mobile screen');
+    await until(() => evaluate('document.querySelectorAll("#order-notifications .toast").length === 0'), 'Toast did not auto-hide', 15000);
+    await evaluate('document.dispatchEvent(new Event("visibilitychange"))');
+    await sleep(1000);
+    assert.equal(await evaluate('document.querySelectorAll("#order-notifications .toast").length'), 0, 'Duplicate notification on later polling');
+    console.log('PASS new-order toast, initial baseline, filtered monitoring, queue, dismiss, auto-hide, mobile bounds and deduplication');
     await navigate(origin + '/menu/inactive-menu-token', false);
     assert.ok(await evaluate('document.body.textContent.includes("Menu belum dapat dibuka")'));
     assert.equal(exceptions.length, 0, JSON.stringify(exceptions));

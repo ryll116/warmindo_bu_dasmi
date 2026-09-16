@@ -11,6 +11,12 @@ class Order extends Model
 {
     use HasUuids;
 
+    public const STATUS_FLOW = ['pending' => 'confirmed', 'confirmed' => 'processing', 'processing' => 'completed'];
+
+    public const STATUSES = ['pending', 'confirmed', 'processing', 'completed'];
+
+    public const PAYMENT_TYPES = ['cash' => 'Cash', 'qris_manual' => 'QRIS Manual'];
+
     protected function casts(): array
     {
         return ['total' => 'decimal:2'];

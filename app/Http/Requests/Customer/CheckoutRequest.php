@@ -23,7 +23,7 @@ class CheckoutRequest extends FormRequest
     public function rules(): array
     {
         if ($this->routeIs('customer.checkout.store')) {
-            return ['checkout_token' => ['required', 'uuid'], 'notes' => ['nullable', 'string', 'max:1000']];
+            return ['checkout_token' => ['required', 'uuid'], 'customer_name' => ['required', 'string', 'max:100'], 'notes' => ['nullable', 'string', 'max:1000']];
         }
 
         return [
@@ -36,6 +36,7 @@ class CheckoutRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'customer_name.*' => 'Nama Pemesan wajib diisi berupa teks, maksimal 100 karakter.',
             'items.required' => 'Keranjang masih kosong. Tambahkan menu terlebih dahulu.',
             'items.array' => 'Data keranjang tidak valid. Silakan kembali ke menu.',
             'items.min' => 'Keranjang masih kosong.',
@@ -45,5 +46,12 @@ class CheckoutRequest extends FormRequest
             'checkout_token.*' => 'Sesi checkout tidak valid. Silakan review ulang dari keranjang.',
             'notes.*' => 'Catatan harus berupa teks, maksimal 1000 karakter.',
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if (is_string($this->input('customer_name'))) {
+            $this->merge(['customer_name' => trim($this->input('customer_name'))]);
+        }
     }
 }

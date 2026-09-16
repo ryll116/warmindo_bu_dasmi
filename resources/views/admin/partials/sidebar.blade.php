@@ -6,7 +6,7 @@
     <div class="offcanvas-body d-flex flex-column p-3">
         <p class="small text-uppercase text-white-50 px-3 mt-2">Management</p>
         <nav class="nav nav-pills flex-column gap-2" aria-label="Menu admin">
-            @foreach (['admin.dashboard' => 'Dashboard', 'admin.categories.index' => 'Categories', 'admin.products.index' => 'Products', 'admin.tables.index' => 'Tables'] as $route => $label)
+            @foreach (['admin.dashboard' => 'Dashboard', 'admin.orders.index' => 'Kasir', 'admin.categories.index' => 'Categories', 'admin.products.index' => 'Products', 'admin.tables.index' => 'Tables'] as $route => $label)
                 @php($active = request()->routeIs(str_replace('.index', '.*', $route)))
                 <a href="{{ route($route) }}" class="nav-link {{ $active ? 'active' : 'text-white-50' }}" @if ($active) aria-current="page" @endif>{{ $label }}</a>
             @endforeach

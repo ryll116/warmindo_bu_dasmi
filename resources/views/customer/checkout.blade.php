@@ -23,6 +23,8 @@
         <form id="checkout-submit" method="POST" action="{{ route('customer.checkout.store', $table->qr_token) }}">
             @csrf
             <input type="hidden" name="checkout_token" value="{{ $checkout_token }}">
+            <label for="customer-name" class="form-label">Nama Pemesan</label>
+            <input id="customer-name" name="customer_name" class="form-control mb-3" required maxlength="100" autocomplete="name" value="{{ old('customer_name') }}">
             <label for="order-notes" class="form-label">Catatan pesanan (opsional)</label>
             <textarea id="order-notes" name="notes" class="form-control" rows="3" maxlength="1000" placeholder="Contoh: Indomie jangan pedas">{{ old('notes') }}</textarea>
             <p class="small text-secondary mt-3">Pembayaran dilakukan di kasir setelah pesanan berhasil dibuat.</p>

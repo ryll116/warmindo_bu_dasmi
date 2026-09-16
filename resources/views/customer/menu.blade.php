@@ -45,7 +45,7 @@
                 <div class="menu-section-heading">
                     <div>
                         <span class="menu-eyebrow">DIBUAT UNTUK SELERA ANDA</span>
-                        <h1 id="menu-title">{{ $categoryId === null ? 'Mau makan apa?' : ($categories->firstWhere('id', $categoryId)?->category_name ?? 'Pilihan menu') }}</h1>
+                        <h1 id="menu-title">{{ $categoryId === null ? 'Pesan Apa Hari Ini?' : ($categories->firstWhere('id', $categoryId)?->category_name ?? 'Pilihan menu') }}</h1>
                     </div>
                     <span class="menu-result-count">{{ $products->count() }} menu</span>
                 </div>

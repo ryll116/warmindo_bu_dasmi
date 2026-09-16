@@ -35,6 +35,7 @@
                             <td><span class="badge rounded-pill {{ $table->is_available ? 'text-bg-success' : 'text-bg-secondary' }}">{{ $table->is_available ? 'Active' : 'Inactive' }}</span></td>
                             <td class="pe-4">
                                 <div class="d-flex justify-content-end flex-wrap gap-2">
+                                    <a href="{{ route('admin.tables.qr', $table) }}" class="btn btn-sm btn-outline-secondary">QR Code</a>
                                     <a href="{{ route('admin.tables.edit', $table) }}" class="btn btn-sm btn-outline-primary" aria-label="Edit {{ $table->table_no }}">Edit</a>
                                     <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#delete-record" data-delete-url="{{ route('admin.tables.destroy', $table) }}" data-record-name="{{ $table->table_no }}" aria-label="Hapus {{ $table->table_no }}">Delete</button>
                                 </div>
