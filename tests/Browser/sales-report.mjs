@@ -76,32 +76,28 @@ try {
     await navigate(origin + '/login', false);
     await evaluate('document.getElementById("email").value = "browser@example.test"; document.getElementById("password").value = ' + JSON.stringify(browserPassword) + '; document.querySelector("form").requestSubmit();');
     await until(() => evaluate('location.pathname === "/admin/products" && document.readyState === "complete"'), 'Admin login failed');
-    await navigate(origin + '/admin/tables/1/qr', false);
-    await evaluate(`new Promise((resolve, reject) => { const script = document.createElement('script'); script.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js'; script.onload = resolve; script.onerror = () => reject(new Error('QR decoder failed to load')); document.head.append(script); })`);
-    const decoded = await evaluate(`(async () => {
-        async function decode(src) {
-            const image = new Image(); image.src = src; await image.decode();
-            const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 1024;
-            const ctx = canvas.getContext('2d'); ctx.drawImage(image, 0, 0, 1024, 1024);
-            const pixels = ctx.getImageData(0, 0, 1024, 1024);
-            const result = jsQR(pixels.data, 1024, 1024);
-            if (!result) throw new Error('QR cannot be decoded');
-            return result.data;
-        }
-        const preview = await decode(document.querySelector('img').src);
-        const link = [...document.querySelectorAll('a')].find(a => a.textContent === 'Download QR');
-        const response = await fetch(link.href);
-        const blob = URL.createObjectURL(await response.blob());
-        const download = await decode(blob); URL.revokeObjectURL(blob);
-        return {preview, download, disposition: response.headers.get('Content-Disposition')};
+    await navigate(origin + '/menu/valid-menu-token');
+    await evaluate(`(async () => {
+        const csrf=document.querySelector('#checkout-start input[name="_token"]').value;
+        const review=await fetch('/menu/valid-menu-token/checkout/review',{method:'POST',body:new URLSearchParams({_token:csrf,'items[0][product_id]':'1','items[0][quantity]':'2'})});
+        const page=new DOMParser().parseFromString(await review.text(),'text/html');
+        const token=page.querySelector('input[name="checkout_token"]').value;
+        await fetch('/menu/valid-menu-token/checkout',{method:'POST',body:new URLSearchParams({_token:csrf,checkout_token:token,customer_name:'Evan'})});
+        const paid=await fetch('/admin/orders/'+token+'/payment',{method:'POST',body:new URLSearchParams({_token:csrf,_method:'PATCH',payment_type:'cash'})});
+        if(!paid.ok) throw new Error('Fixture payment failed');
     })()`);
-    assert.equal(decoded.preview, origin + '/menu/valid-menu-token');
-    assert.equal(decoded.download, decoded.preview);
-    assert.ok(decoded.disposition.includes('meja-05-qr.svg'));
-    await navigate(decoded.download);
-    assert.ok(await evaluate('document.body.textContent.includes("Meja 05")'));
-    assert.equal(exceptions.length, 0);
-    console.log('PASS QR preview and downloaded SVG independently decoded to table 05 customer menu');
+    await navigate(origin + '/admin/reports/sales', false);
+    assert.ok(await evaluate('document.body.textContent.includes("Rp30.000,00") && document.body.textContent.includes("Evan")'));
+    for(const width of [390,768,1440]) {
+        await cdp('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width===390});
+        assert.ok(await evaluate('document.documentElement.scrollWidth <= innerWidth'),'Report overflow at '+width);
+    }
+    await navigate(origin + '/admin/reports/sales?period=yesterday',false);
+    assert.ok(await evaluate('document.body.textContent.includes("Tidak ada transaksi lunas")'));
+    await navigate(origin + '/admin/reports/sales?period=today&search=Evan',false);
+    assert.ok(await evaluate('document.body.textContent.includes("Rp30.000,00")'));
+    assert.equal(exceptions.length,0);
+    console.log('PASS report paid sale, date filter, search, mobile/tablet/desktop layout');
 } catch (error) {
     console.error(logs);
     throw error;

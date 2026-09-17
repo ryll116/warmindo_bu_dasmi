@@ -5,12 +5,19 @@ namespace Tests\Feature\Admin;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Table;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 class MasterCrudTest extends AdminDatabaseTestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->actingAs(User::factory()->admin()->create());
+    }
+
     public function test_category_can_be_created_edited_and_deleted(): void
     {
         $this->get(route('admin.categories.create'))->assertOk()->assertSee('Category Name');

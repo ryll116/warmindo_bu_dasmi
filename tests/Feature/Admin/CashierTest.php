@@ -5,6 +5,7 @@ namespace Tests\Feature\Admin;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Table;
+use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
@@ -13,6 +14,7 @@ class CashierTest extends AdminDatabaseTestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->actingAs(User::factory()->create());
         Schema::table('orders', function (Blueprint $table): void {
             $table->string('customer_name', 100)->nullable();
             $table->string('order_status')->default('pending');

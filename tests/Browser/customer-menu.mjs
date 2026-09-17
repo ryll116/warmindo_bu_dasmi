@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { randomBytes } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -6,6 +7,7 @@ import path from 'node:path';
 import net from 'node:net';
 
 const root = process.cwd();
+const browserPassword = randomBytes(24).toString('hex');
 const output = await mkdtemp(path.join(tmpdir(), 'warmindo-mobile-'));
 await writeFile(path.join(output, 'browser.sqlite'), '');
 await mkdir(path.join(output, 'sessions'));
@@ -25,7 +27,7 @@ await new Promise(resolve => probe.listen(0, '127.0.0.1', resolve));
 const port = probe.address().port;
 await new Promise(resolve => probe.close(resolve));
 const origin = 'http://127.0.0.1:' + port;
-const server = spawn('php', ['-d', 'extension=pdo_sqlite', '-S', '127.0.0.1:' + port, '-t', 'public', 'tests/Browser/customer-menu-router.php'], { cwd: root, env: { ...process.env, WARMINDO_BROWSER_DIR: output }, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+const server = spawn('php', ['-d', 'extension=pdo_sqlite', '-S', '127.0.0.1:' + port, '-t', 'public', 'tests/Browser/customer-menu-router.php'], { cwd: root, env: { ...process.env, WARMINDO_BROWSER_DIR: output, WARMINDO_BROWSER_PASSWORD: browserPassword, APP_DEMO_MODE: 'true' }, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
 let logs = '';
 server.stderr.on('data', chunk => { logs = (logs + chunk).slice(-6000); });
 server.stdout.on('data', () => {});
@@ -92,9 +94,17 @@ try {
     assert.equal(await evaluate('document.getElementById("menu-suggestions").hidden'), true);
     console.log('PASS autocomplete matching, limit, highlight, selection, category, dismissal, mobile bounds');
     const viewportResults = [];
+    assert.ok(await evaluate('document.querySelector(".demo-watermark").textContent.includes("DEMO VERSION")'));
+    assert.equal(await evaluate('getComputedStyle(document.querySelector(".demo-watermark")).pointerEvents'), 'none');
+    assert.equal(await evaluate('getComputedStyle(document.querySelector(".demo-watermark")).position'), 'fixed');
     for (const width of [360, 390, 430, 768, 1024, 1440]) {
         await cdp('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width <= 430 });
         await navigate(origin + '/menu/valid-menu-token');
+        assert.ok(await evaluate(`(() => {
+            const button = document.querySelector('.menu-product .increase');
+            const r = button.getBoundingClientRect();
+            return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2).closest('button') === button;
+        })()`), 'Watermark intercepts product button at ' + width);
         await evaluate('localStorage.clear(); window.dispatchEvent(new StorageEvent("storage", {key: null})); document.querySelector(".menu-product .increase").click(); document.querySelector(".menu-product .increase").click();');
         assert.equal(await evaluate('document.getElementById("cart-count").textContent'), '2 item');
         assert.equal(await evaluate('document.getElementById("cart-total").textContent'), 'Rp30.000');
@@ -195,6 +205,9 @@ try {
     await until(() => evaluate('document.readyState === "complete" && !!document.getElementById("checkout-success")'), 'Retry did not return success');
     assert.ok(await evaluate('localStorage.getItem("warmindo:cart:v1:valid-menu-token") !== null'), 'Retry of an old order erased a new cart');
     console.log('PASS checkout review, notes, success, cart clearing, success revisit and retry');
+    await navigate(origin + '/login', false);
+    await evaluate('document.getElementById("email").value = "browser@example.test"; document.getElementById("password").value = ' + JSON.stringify(browserPassword) + '; document.querySelector("form").requestSubmit();');
+    await until(() => evaluate('location.pathname === "/admin/products" && document.readyState === "complete"'), 'Admin login failed');
     await navigate(origin + '/admin/orders', false);
     await until(() => evaluate('!!document.getElementById("orders-list")'), 'Cashier list missing');
     for (const width of [390, 768, 1440]) {

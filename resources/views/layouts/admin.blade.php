@@ -9,6 +9,7 @@
     @stack('styles')
 </head>
 <body>
+    @include('layouts.demo-watermark')
     <a href="#main-content" class="visually-hidden-focusable position-absolute bg-white p-3">Langsung ke konten</a>
     @include('admin.partials.sidebar')
     <div class="admin-main">

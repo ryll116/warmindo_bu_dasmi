@@ -4,11 +4,18 @@ namespace Tests\Feature\Admin;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 class ProductCrudTest extends AdminDatabaseTestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->actingAs(User::factory()->admin()->create());
+    }
+
     public function test_list_displays_products_categories_and_pagination(): void
     {
         $category = Category::factory()->create(['category_name' => 'Aneka Mie']);
@@ -20,9 +27,9 @@ class ProductCrudTest extends AdminDatabaseTestCase
             ->assertSee('Rp 15.000,00')
             ->assertSee('Available')
             ->assertSee('page=2')
-            ->assertSee('Dashboard')
-            ->assertSee('Categories')
-            ->assertSee('Tables')
+            ->assertSee('Kasir')
+            ->assertSee('Manajemen Kategori')
+            ->assertSee('Manajemen Table')
             ->assertViewHas('products', fn ($products) => $products->count() === 15 && $products->total() === 16);
 
         $this->get(route('admin.products.index', ['page' => 2]))

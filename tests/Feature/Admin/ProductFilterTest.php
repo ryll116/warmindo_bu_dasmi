@@ -4,10 +4,17 @@ namespace Tests\Feature\Admin;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\User;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 class ProductFilterTest extends AdminDatabaseTestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->actingAs(User::factory()->admin()->create());
+    }
+
     #[DataProvider('searchTerms')]
     public function test_search_matches_code_name_or_category_without_case_sensitivity(string $term): void
     {

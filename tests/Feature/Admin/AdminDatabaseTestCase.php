@@ -17,6 +17,9 @@ abstract class AdminDatabaseTestCase extends TestCase
         DB::purge('sqlite');
         $this->assertSame(':memory:', DB::connection()->getDatabaseName());
 
+        (require database_path('migrations/0001_01_01_000000_create_users_table.php'))->up();
+        (require database_path('migrations/2026_09_17_023811_add_role_to_users_table.php'))->up();
+
         // Test-only schema reflects master columns inspected in MySQL, without running migrations.
         Schema::create('categories', function (Blueprint $table): void {
             $table->id();

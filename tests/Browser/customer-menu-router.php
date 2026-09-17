@@ -7,6 +7,7 @@
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\User;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
@@ -38,6 +39,13 @@ config([
 ]);
 DB::purge('sqlite');
 if (! Schema::hasTable('tables')) {
+    (require $root.'/database/migrations/0001_01_01_000000_create_users_table.php')->up();
+    (require $root.'/database/migrations/2026_09_17_023811_add_role_to_users_table.php')->up();
+    $password = getenv('WARMINDO_BROWSER_PASSWORD');
+    if (! $password) {
+        throw new RuntimeException('Browser fixtures require a generated test password.');
+    }
+    User::create(['name' => 'Browser Admin', 'email' => 'browser@example.test', 'password' => $password, 'role' => 'admin']);
     Schema::create('categories', function (Blueprint $table): void {
         $table->id();
         $table->text('category_name');

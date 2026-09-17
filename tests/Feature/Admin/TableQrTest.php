@@ -3,9 +3,16 @@
 namespace Tests\Feature\Admin;
 
 use App\Models\Table;
+use App\Models\User;
 
 class TableQrTest extends AdminDatabaseTestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->actingAs(User::factory()->admin()->create());
+    }
+
     public function test_qr_uses_configured_url_and_existing_token_and_download_matches_preview(): void
     {
         config(['app.url' => 'https://menu.example.test']);
