@@ -15,7 +15,7 @@ class UserRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()?->isAdmin() ?? false;
+        return $this->user()?->isSuperAdmin() ?? false;
     }
 
     /**
@@ -30,7 +30,7 @@ class UserRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user instanceof User ? $user : null)],
-            'role' => ['required', Rule::in(['admin', 'kasir'])],
+            'role' => ['required', Rule::in(['admin', 'kasir', 'superAdmin'])],
             'password' => [$user instanceof User ? 'nullable' : 'required', 'string', 'max:255', 'confirmed', Password::min(8)],
         ];
     }
@@ -41,7 +41,7 @@ class UserRequest extends FormRequest
             'required' => ':attribute wajib diisi.',
             'email.email' => 'Masukkan alamat email yang valid.',
             'email.unique' => 'Email sudah digunakan oleh akun lain.',
-            'role.in' => 'Role harus admin atau kasir.',
+            'role.in' => 'Role harus superAdmin, admin, atau kasir.',
             'password.confirmed' => 'Konfirmasi password tidak sesuai.',
             'password.min' => 'Password minimal 8 karakter.',
         ];

@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests\Customer;
 
+use App\Models\Order;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class CheckoutRequest extends FormRequest
 {
@@ -23,7 +25,12 @@ class CheckoutRequest extends FormRequest
     public function rules(): array
     {
         if ($this->routeIs('customer.checkout.store')) {
-            return ['checkout_token' => ['required', 'uuid'], 'customer_name' => ['required', 'string', 'max:100'], 'notes' => ['nullable', 'string', 'max:1000']];
+            return [
+                'checkout_token' => ['required', 'uuid'],
+                'customer_name' => ['required', 'string', 'max:100'],
+                'payment_type' => ['required', 'string', Rule::in(array_keys(Order::CUSTOMER_PAYMENT_TYPES))],
+                'notes' => ['nullable', 'string', 'max:1000'],
+            ];
         }
 
         return [
@@ -36,6 +43,7 @@ class CheckoutRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'payment_type.*' => 'Pilih metode pembayaran: Bayar di Kasir atau Bayar dari HP (QRIS).',
             'customer_name.*' => 'Nama Pemesan wajib diisi berupa teks, maksimal 100 karakter.',
             'items.required' => 'Keranjang masih kosong. Tambahkan menu terlebih dahulu.',
             'items.array' => 'Data keranjang tidak valid. Silakan kembali ke menu.',

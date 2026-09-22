@@ -82,7 +82,7 @@ class CashierTest extends AdminDatabaseTestCase
         foreach ([[], ['payment_type' => 'gateway'], ['payment_type' => []]] as $payload) {
             $this->patchJson(route('admin.orders.payment', $order), $payload)->assertUnprocessable();
         }
-        $this->assertDatabaseHas('orders', ['id' => $order->id, 'payment_status' => 'unpaid', 'payment_type' => null, 'payment_time' => null]);
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'payment_status' => 'unpaid', 'payment_type' => 'cash', 'payment_time' => null]);
     }
 
     public function test_polling_only_notifies_new_orders_independently_of_filters_and_pagination(): void
@@ -187,13 +187,26 @@ class CashierTest extends AdminDatabaseTestCase
         $this->assertSame('30000.00', $order->fresh()->total);
     }
 
-    private function customerOrder(): Order
+    public function test_selected_customer_methods_are_visible_and_qris_requires_cashier_confirmation(): void
+    {
+        foreach (['cash' => 'Bayar di Kasir', 'qris_manual' => 'QRIS'] as $method => $label) {
+            $order = $this->customerOrder($method);
+            $this->get(route('admin.orders.index'), ['X-Orders-Partial' => '1'])->assertOk()->assertSee($label)->assertSee('UNPAID');
+            $this->get(route('admin.orders.show', $order))->assertOk()->assertSee($label)->assertSee('UNPAID')->assertSee('Konfirmasi Pembayaran');
+            $this->assertDatabaseHas('orders', ['id' => $order->id, 'payment_type' => $method, 'payment_status' => 'unpaid', 'payment_time' => null]);
+            $this->patch(route('admin.orders.payment', $order), ['payment_type' => $method])->assertRedirect();
+            $this->assertDatabaseHas('orders', ['id' => $order->id, 'payment_type' => $method, 'payment_status' => 'paid']);
+            $this->assertNotNull($order->fresh()->payment_time);
+        }
+    }
+
+    private function customerOrder(string $paymentType = 'cash'): Order
     {
         $table = Table::factory()->create(['table_no' => 5]);
         $product = Product::factory()->create(['product_name' => 'Coto Makassar', 'price' => '15000.00']);
         $review = $this->post(route('customer.checkout.review', $table->qr_token), ['items' => [['product_id' => $product->id, 'quantity' => 2]]])->assertRedirect();
         $token = basename($review->headers->get('Location'));
-        $this->post(route('customer.checkout.store', $table->qr_token), ['customer_name' => '  Evan  ', 'checkout_token' => $token, 'notes' => 'Tidak pedas'])->assertRedirect();
+        $this->post(route('customer.checkout.store', $table->qr_token), ['payment_type' => $paymentType, 'customer_name' => '  Evan  ', 'checkout_token' => $token, 'notes' => 'Tidak pedas'])->assertRedirect();
 
         return Order::findOrFail($token);
     }

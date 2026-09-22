@@ -5,12 +5,38 @@
     </div>
     <div class="offcanvas-body d-flex flex-column p-3">
         <!-- <p class="small text-uppercase text-white-50 px-3 mt-2">Management</p> -->
+        @php
+            $user = auth()->user();
+        
+            if ($user->isSuperAdmin()) {
+                $menus = [
+                    'admin.reports.sales' => 'Laporan Penjualan',
+                    'admin.orders.index' => 'Kasir',
+                    'admin.categories.index' => 'Manajemen Kategori',
+                    'admin.products.index' => 'Manajemen Produk',
+                    'admin.tables.index' => 'Manajemen Table',
+                    'admin.users.index' => 'User Management',
+                ];
+            } elseif ($user->isAdmin()) {
+                $menus = [
+                    'admin.reports.sales' => 'Laporan Penjualan',
+                    'admin.orders.index' => 'Kasir',
+                    'admin.categories.index' => 'Manajemen Kategori',
+                    'admin.products.index' => 'Manajemen Produk',
+                    'admin.tables.index' => 'Manajemen Table',
+                ];
+            } else {
+                $menus = [
+                    'admin.orders.index' => 'Dashboard Kasir',
+                ];
+            }
+        @endphp
         <nav class="nav nav-pills flex-column gap-2" aria-label="Menu admin">
-            @foreach (auth()->user()->isAdmin() ? ['admin.reports.sales' => 'Laporan Penjualan', 'admin.orders.index' => 'Kasir', 'admin.categories.index' => 'Manajemen Kategori', 'admin.products.index' => 'Manajemen Produk', 'admin.tables.index' => 'Manajemen Table', 'admin.users.index' => 'User Management'] : ['admin.orders.index' => 'Dashboard Kasir'] as $route => $label)
+            @foreach ($menus as $route => $label)
                 @php($active = request()->routeIs(str_replace('.index', '.*', $route)))
                 <a href="{{ route($route) }}" class="nav-link {{ $active ? 'active' : 'text-white-50' }}" @if ($active) aria-current="page" @endif>{{ $label }}</a>
             @endforeach
         </nav>
-        <div class="mt-auto pt-5 px-3 small text-white-50">Warmindo {{ auth()->user()->isAdmin() ? 'Admin' : 'Kasir' }}</div>
+        <div class="mt-auto pt-5 px-3 small text-white-50">Warmindo {{ auth()->user()->isAdmin() || auth()->user()->isSuperAdmin() ? 'Admin' : 'Kasir' }}</div>
     </div>
 </aside>

@@ -62,6 +62,9 @@ class CheckoutController extends Controller
                 $lines = $this->lines($draft['items'], true);
                 $order = new Order;
                 $order->customer_name = $request->validated('customer_name');
+                $order->payment_type = $request->validated('payment_type');
+                $order->payment_status = 'unpaid';
+                $order->payment_time = null;
                 $order->id = $token;
                 $order->table()->associate($table);
                 $order->save();

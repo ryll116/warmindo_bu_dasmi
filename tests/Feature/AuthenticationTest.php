@@ -53,7 +53,7 @@ class AuthenticationTest extends AdminDatabaseTestCase
 
     public function test_valid_login_regenerates_session_and_redirects_each_role(): void
     {
-        foreach (['admin' => 'admin.products.index', 'kasir' => 'admin.orders.index'] as $role => $destination) {
+        foreach (['admin' => 'admin.products.index', 'kasir' => 'admin.orders.index', 'superAdmin' => 'admin.orders.index'] as $role => $destination) {
             $user = User::factory()->create(['role' => $role]);
             $this->withSession(['url.intended' => route('admin.users.index')]);
             $oldId = session()->getId();
@@ -99,13 +99,31 @@ class AuthenticationTest extends AdminDatabaseTestCase
         $this->get(route('admin.users.index'))->assertRedirect(route('login'));
     }
 
-    public function test_admin_can_access_every_management_area_and_cashier(): void
+    public function test_admin_and_super_admin_can_access_shared_management_and_cashier(): void
     {
-        $this->actingAs(User::factory()->admin()->create());
-        foreach (['products.index', 'categories.index', 'tables.index', 'reports.sales', 'users.index', 'users.create', 'orders.index', 'dashboard'] as $name) {
-            $this->get(route('admin.'.$name))->assertOk();
+        foreach (['admin', 'superAdmin'] as $role) {
+            $this->actingAs(User::factory()->create(['role' => $role]));
+            foreach (['products.index', 'categories.index', 'tables.index', 'reports.sales', 'orders.index', 'dashboard'] as $name) {
+                $this->get(route('admin.'.$name))->assertOk();
+            }
         }
-        $this->get(route('admin.users.index'))->assertSee('User Management')->assertSee('Logout');
+        $this->get(route('admin.users.index'))->assertOk()->assertSee('User Management')->assertSee('Logout');
+        $this->get(route('admin.users.create'))->assertOk();
+    }
+
+    public function test_admin_cannot_access_any_user_management_route_even_directly(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs(User::factory()->admin()->create());
+        $checked = 0;
+        foreach (Route::getRoutes() as $route) {
+            if (str_starts_with($route->getName() ?? '', 'admin.users.')) {
+                $this->call($route->methods()[0], '/'.str_replace('{user}', $user->id, $route->uri()))->assertForbidden();
+                $checked++;
+            }
+        }
+        $this->assertSame(6, $checked);
+        $this->get(route('admin.products.index'))->assertOk()->assertDontSee('User Management');
     }
 
     public function test_kasir_is_forbidden_from_all_admin_only_routes_including_writes(): void
@@ -116,7 +134,7 @@ class AuthenticationTest extends AdminDatabaseTestCase
         $product = Product::factory()->create();
         $this->actingAs(User::factory()->create());
         foreach (Route::getRoutes() as $route) {
-            if (in_array('role:admin', $route->gatherMiddleware(), true)) {
+            if (array_intersect(['role:admin,superAdmin', 'role:superAdmin'], $route->gatherMiddleware())) {
                 $uri = str_replace(['{user}', '{table}', '{category}', '{product}'], [$user->id, $table->id, $category->id, $product->id], $route->uri());
                 $this->call($route->methods()[0], '/'.$uri)->assertForbidden();
             }
@@ -133,7 +151,7 @@ class AuthenticationTest extends AdminDatabaseTestCase
 
     public function test_demo_watermark_on_login_and_user_management_follows_configuration(): void
     {
-        $user = User::factory()->admin()->create();
+        $user = User::factory()->create(['role' => 'superAdmin']);
         foreach ([true, false] as $enabled) {
             config(['app.demo_mode' => $enabled]);
             Auth::forgetGuards();

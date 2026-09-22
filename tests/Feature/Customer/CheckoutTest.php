@@ -3,6 +3,7 @@
 namespace Tests\Feature\Customer;
 
 use App\Models\Category;
+use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Table;
@@ -43,7 +44,7 @@ class CheckoutTest extends AdminDatabaseTestCase
         $product = Product::factory()->create(['product_name' => 'Indomie Telur', 'price' => '15000.50']);
         $second = Product::factory()->create(['price' => '10000.25']);
         $response = $this->post(route('customer.checkout.review', $table->qr_token), ['table_id' => $other->id, 'total' => 1, 'items' => [
-            ['product_id' => $product->id, 'quantity' => 2, 'price' => 1], ['product_id' => $second->id, 'quantity' => 1],
+            ['product_id' => $product->id, 'quantity' => 2, 'price' => 1, 'subtotal' => 1], ['product_id' => $second->id, 'quantity' => 1, 'subtotal' => 1],
         ]])->assertRedirect();
         $url = $response->headers->get('Location');
         $token = basename($url);
@@ -51,7 +52,7 @@ class CheckoutTest extends AdminDatabaseTestCase
         $this->assertDatabaseCount('orders', 0);
         $product->update(['price' => '16000.50']);
 
-        $response = $this->post(route('customer.checkout.store', $table->qr_token), ['customer_name' => '  Evan  ', 'checkout_token' => $token, 'notes' => 'Tidak pedas', 'total' => 1, 'table_id' => $other->id])->assertRedirect();
+        $response = $this->post(route('customer.checkout.store', $table->qr_token), ['payment_type' => 'cash', 'customer_name' => '  Evan  ', 'checkout_token' => $token, 'notes' => 'Tidak pedas', 'total' => 1, 'table_id' => $other->id])->assertRedirect();
 
         $this->assertDatabaseHas('orders', ['id' => $token, 'table_id' => $table->id, 'total' => '42001.25', 'order_status' => 'pending', 'payment_status' => 'unpaid']);
         $this->assertDatabaseCount('order_items', 2);
@@ -62,8 +63,8 @@ class CheckoutTest extends AdminDatabaseTestCase
         $this->get($success)->assertOk()->assertSee('Pesanan Berhasil')->assertSee('data-clear-cart="true"', false);
         $this->get($success)->assertOk()->assertSee('data-clear-cart="false"', false);
         $this->get(route('customer.checkout.success', ['qr_token' => $table->qr_token, 'order' => $token]))->assertForbidden();
-        $this->postJson(route('customer.checkout.store', $other->qr_token), ['customer_name' => '  Evan  ', 'checkout_token' => $token])->assertUnprocessable();
-        $this->post(route('customer.checkout.store', $table->qr_token), ['customer_name' => '  Evan  ', 'checkout_token' => $token])->assertRedirect();
+        $this->postJson(route('customer.checkout.store', $other->qr_token), ['payment_type' => 'cash', 'customer_name' => '  Evan  ', 'checkout_token' => $token])->assertUnprocessable();
+        $this->post(route('customer.checkout.store', $table->qr_token), ['payment_type' => 'cash', 'customer_name' => '  Evan  ', 'checkout_token' => $token])->assertRedirect();
         $this->assertDatabaseCount('orders', 1);
         $this->assertDatabaseCount('order_items', 2);
     }
@@ -72,16 +73,81 @@ class CheckoutTest extends AdminDatabaseTestCase
     {
         $table = Table::factory()->create();
         foreach ([null, '   ', ['bad'], str_repeat('a', 101)] as $name) {
-            $this->postJson(route('customer.checkout.store', $table->qr_token), ['checkout_token' => (string) Str::uuid(), 'customer_name' => $name])->assertUnprocessable()->assertJsonValidationErrors('customer_name');
+            $this->postJson(route('customer.checkout.store', $table->qr_token), ['payment_type' => 'cash', 'checkout_token' => (string) Str::uuid(), 'customer_name' => $name])->assertUnprocessable()->assertJsonValidationErrors('customer_name');
         }
         $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_payment_method_is_required_and_whitelisted(): void
+    {
+        $table = Table::factory()->create();
+        $product = Product::factory()->create();
+        $review = $this->post(route('customer.checkout.review', $table->qr_token), ['items' => [['product_id' => $product->id, 'quantity' => 1]]])->assertRedirect();
+        $payload = ['checkout_token' => basename($review->headers->get('Location')), 'customer_name' => 'Evan'];
+
+        foreach ([[], ['payment_type' => null], ['payment_type' => ''], ['payment_type' => 'abc'], ['payment_type' => 'transfer'], ['payment_type' => 'random-value'], ['payment_type' => []]] as $method) {
+            $this->postJson(route('customer.checkout.store', $table->qr_token), array_merge($payload, $method))
+                ->assertUnprocessable()->assertJsonValidationErrors('payment_type');
+        }
+        $this->assertDatabaseCount('orders', 0);
+        $this->assertDatabaseCount('order_items', 0);
+    }
+
+    public function test_customer_payment_methods_remain_unpaid_and_ignore_forged_payment_and_pricing_fields(): void
+    {
+        $table = Table::factory()->create(['table_no' => 7]);
+        $other = Table::factory()->create();
+        $product = Product::factory()->create(['price' => '15000.50']);
+        foreach (['cash', 'qris_manual'] as $method) {
+            $review = $this->post(route('customer.checkout.review', $table->qr_token), ['items' => [['product_id' => $product->id, 'quantity' => 2, 'price' => 1, 'subtotal' => 1]]])->assertRedirect();
+            $token = basename($review->headers->get('Location'));
+            $this->get($review->headers->get('Location'))->assertOk()->assertSee('Metode Pembayaran')->assertSee('value="qris_manual" required', false)->assertSee('value="cash" required', false);
+            $payload = [
+                'checkout_token' => $token, 'customer_name' => 'Evan', 'payment_type' => $method,
+                'payment_status' => 'paid', 'payment_time' => '2026-09-22 12:00:00',
+                'table_id' => $other->id, 'price' => 1, 'subtotal' => 1, 'total' => 1,
+                'items' => [['product_id' => $product->id, 'quantity' => 99, 'price' => 1]],
+            ];
+            $response = $this->post(route('customer.checkout.store', $table->qr_token), $payload)->assertRedirect();
+            $successUrl = $response->headers->get('Location');
+            for ($visit = 0; $visit < 2; $visit++) {
+                $success = $this->get($successUrl)->assertOk()->assertSee('Evan')->assertSee('Rp30.001')->assertSee('unpaid');
+                if ($method === 'cash') {
+                    $success->assertSee('Silakan melakukan pembayaran di kasir.')->assertDontSee('images/qris-demo.svg');
+                } else {
+                    $success->assertSee('QR Pembayaran Demo')->assertSee('QRIS belum terhubung')->assertSee('images/qris-demo.svg')->assertSee('Menunggu Pembayaran');
+                }
+                $this->assertDatabaseHas('orders', ['id' => $token, 'table_id' => $table->id, 'payment_type' => $method, 'payment_status' => 'unpaid', 'payment_time' => null, 'total' => '30001.00']);
+            }
+            $this->assertDatabaseHas('order_items', ['order_id' => $token, 'qty' => 2, 'price' => '15000.50', 'subtotal' => '30001.00']);
+            $payload['payment_type'] = $method === 'cash' ? 'qris_manual' : 'cash';
+            $this->post(route('customer.checkout.store', $table->qr_token), $payload)->assertRedirect();
+            $this->assertSame($method, Order::findOrFail($token)->payment_type);
+        }
+        $this->assertDatabaseCount('orders', 2);
+        $this->assertDatabaseCount('order_items', 2);
+    }
+
+    public function test_paid_qris_order_no_longer_displays_demo_or_waiting_message(): void
+    {
+        $table = Table::factory()->create();
+        $product = Product::factory()->create();
+        $review = $this->post(route('customer.checkout.review', $table->qr_token), ['items' => [['product_id' => $product->id, 'quantity' => 1]]]);
+        $token = basename($review->headers->get('Location'));
+        $response = $this->post(route('customer.checkout.store', $table->qr_token), ['checkout_token' => $token, 'customer_name' => 'Evan', 'payment_type' => 'qris_manual'])->assertRedirect();
+        $order = Order::findOrFail($token);
+        $order->payment_status = 'paid';
+        $order->payment_time = now();
+        $order->save();
+
+        $this->get($response->headers->get('Location'))->assertOk()->assertSee('paid')->assertDontSee('images/qris-demo.svg')->assertDontSee('Menunggu Pembayaran')->assertDontSee('Silakan melakukan pembayaran di kasir.');
     }
 
     public function test_invalid_cart_quantities_products_and_tables_create_nothing(): void
     {
         $table = Table::factory()->create();
         $product = Product::factory()->create();
-        foreach ([0, -1, 1.5, 100, 'invalid'] as $quantity) {
+        foreach ([0, -1, 1.5, 100, 2147483647, PHP_INT_MAX, 'invalid'] as $quantity) {
             $this->postJson(route('customer.checkout.review', $table->qr_token), ['items' => [['product_id' => $product->id, 'quantity' => $quantity]]])->assertUnprocessable()->assertJsonValidationErrors('items.0.quantity');
         }
         $inactive = Product::factory()->create(['category_id' => Category::factory()->create(['status' => 'inactive'])->id]);
@@ -103,12 +169,12 @@ class CheckoutTest extends AdminDatabaseTestCase
         $product = Product::factory()->create(['category_id' => Category::factory()->create(['status' => null])->id]);
         $response = $this->post(route('customer.checkout.review', $table->qr_token), ['items' => [['product_id' => $product->id, 'quantity' => 1]]])->assertRedirect();
         $token = basename($response->headers->get('Location'));
-        $this->postJson(route('customer.checkout.store', $table->qr_token), ['customer_name' => '  Evan  ', 'checkout_token' => (string) Str::uuid()])->assertUnprocessable();
+        $this->postJson(route('customer.checkout.store', $table->qr_token), ['payment_type' => 'cash', 'customer_name' => '  Evan  ', 'checkout_token' => (string) Str::uuid()])->assertUnprocessable();
         $product->update(['is_available' => false]);
-        $this->postJson(route('customer.checkout.store', $table->qr_token), ['customer_name' => '  Evan  ', 'checkout_token' => $token])->assertUnprocessable()->assertJsonValidationErrors('items');
+        $this->postJson(route('customer.checkout.store', $table->qr_token), ['payment_type' => 'cash', 'customer_name' => '  Evan  ', 'checkout_token' => $token])->assertUnprocessable()->assertJsonValidationErrors('items');
         $product->update(['is_available' => true]);
         $table->update(['is_available' => false]);
-        $this->postJson(route('customer.checkout.store', $table->qr_token), ['customer_name' => '  Evan  ', 'checkout_token' => $token])->assertUnprocessable()->assertJsonValidationErrors('checkout');
+        $this->postJson(route('customer.checkout.store', $table->qr_token), ['payment_type' => 'cash', 'customer_name' => '  Evan  ', 'checkout_token' => $token])->assertUnprocessable()->assertJsonValidationErrors('checkout');
         $this->assertDatabaseCount('orders', 0);
     }
 
@@ -125,7 +191,7 @@ class CheckoutTest extends AdminDatabaseTestCase
             }
         });
         try {
-            $this->from($url)->post(route('customer.checkout.store', $table->qr_token), ['customer_name' => '  Evan  ', 'checkout_token' => basename($url), 'notes' => 'Tidak pedas'])
+            $this->from($url)->post(route('customer.checkout.store', $table->qr_token), ['payment_type' => 'cash', 'customer_name' => '  Evan  ', 'checkout_token' => basename($url), 'notes' => 'Tidak pedas'])
                 ->assertRedirect($url)->assertSessionHasErrors('checkout')->assertSessionHasInput('notes', 'Tidak pedas');
         } finally {
             OrderItem::flushEventListeners();

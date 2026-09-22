@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
+  <title>QR Pembayaran Demo — QRIS belum terhubung</title>
+  <rect width="240" height="240" rx="16" fill="#f3f4f6"/>
+  <g fill="none" stroke="#9ca3af" stroke-width="8">
+    <path d="M28 80V28h52M160 28h52v52M28 160v52h52M212 160v52h-52"/>
+    <rect x="48" y="48" width="28" height="28"/>
+    <rect x="164" y="48" width="28" height="28"/>
+    <rect x="48" y="164" width="28" height="28"/>
+  </g>
+  <text x="120" y="117" text-anchor="middle" font-family="sans-serif" font-size="23" font-weight="bold" fill="#374151">DEMO</text>
+  <text x="120" y="140" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#374151">QRIS belum terhubung</text>
+</svg>

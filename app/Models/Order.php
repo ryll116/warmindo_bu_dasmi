@@ -17,6 +17,8 @@ class Order extends Model
 
     public const PAYMENT_TYPES = ['cash' => 'Cash', 'qris_manual' => 'QRIS Manual'];
 
+    public const CUSTOMER_PAYMENT_TYPES = ['cash' => 'Bayar di Kasir', 'qris_manual' => 'QRIS'];
+
     protected function casts(): array
     {
         return ['total' => 'decimal:2'];

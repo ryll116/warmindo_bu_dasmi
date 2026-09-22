@@ -2,15 +2,16 @@
 @section('title', 'Detail Pesanan')
 @section('content')
     <a href="{{ route('admin.orders.index') }}" class="btn btn-outline-secondary mb-3">Kembali ke Kasir</a>
+    <a href="{{ route('admin.orders.receipt', $order) }}" class="btn btn-outline-primary mb-3">Lihat Struk</a>
     <h1 class="h3">Meja {{ str_pad((string) $order->table?->table_no, 2, '0', STR_PAD_LEFT) }}</h1>
     <p class="fw-semibold text-break">Nama Pemesan: {{ $order->customer_name ?: 'Nama belum tersedia' }}</p>
     <div class="card card-body border-0 shadow-sm mb-3">
         <dl class="row mb-0">
-            <dt class="col-sm-4">Waktu order</dt><dd class="col-sm-8">{{ $order->created_at?->format('d/m/Y H:i') }}</dd>
+            <dt class="col-sm-4">Waktu order</dt><dd class="col-sm-8">{{ $order->created_at?->copy()->setTimezone('Asia/Jakarta')->format('d/m/Y H:i') }} WIB</dd>
             <dt class="col-sm-4">Order status</dt><dd class="col-sm-8"><span class="badge text-bg-primary">{{ ucfirst($order->order_status) }}</span></dd>
             <dt class="col-sm-4">Payment status</dt><dd class="col-sm-8"><span class="badge {{ $order->payment_status === 'paid' ? 'text-bg-success' : 'text-bg-danger' }}">{{ strtoupper($order->payment_status) }}</span></dd>
-            <dt class="col-sm-4">Metode pembayaran</dt><dd class="col-sm-8">{{ App\Models\Order::PAYMENT_TYPES[$order->payment_type] ?? $order->payment_type ?? '—' }}</dd>
-            @if ($order->payment_time)<dt class="col-sm-4">Waktu pembayaran</dt><dd class="col-sm-8">{{ $order->payment_time }}</dd>@endif
+            <dt class="col-sm-4">Metode pembayaran</dt><dd class="col-sm-8">{{ ($order->payment_status === 'unpaid' ? App\Models\Order::CUSTOMER_PAYMENT_TYPES : App\Models\Order::PAYMENT_TYPES)[$order->payment_type] ?? $order->payment_type ?? '—' }}</dd>
+            @if ($order->payment_time)<dt class="col-sm-4">Waktu pembayaran</dt><dd class="col-sm-8">{{ Carbon\CarbonImmutable::parse($order->payment_time, config('app.timezone'))->setTimezone('Asia/Jakarta')->format('d/m/Y H:i') }} WIB</dd>@endif
         </dl>
     </div>
     <div class="card card-body border-0 shadow-sm mb-3">

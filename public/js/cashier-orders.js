@@ -2,21 +2,30 @@
     'use strict';
 
     document.querySelectorAll('[data-cashier-action]').forEach(form => {
+        const button = form.querySelector('button[type="submit"]');
+        const originalLabel = button.textContent;
+        const originallyDisabled = button.disabled;
         form.addEventListener('submit', event => {
-            if (form.dataset.confirm && !window.confirm(form.dataset.confirm)) {
-                event.preventDefault();
-                return;
-            }
+            if (event.defaultPrevented) return;
             if (form.dataset.submitting) {
                 event.preventDefault();
                 return;
             }
+            if (form.dataset.confirm && !window.confirm(form.dataset.confirm)) {
+                event.preventDefault();
+                return;
+            }
             form.dataset.submitting = 'true';
-            form.querySelector('button[type="submit"]').disabled = true;
+            button.disabled = true;
+            button.setAttribute('aria-busy', 'true');
+            button.textContent = 'Memproses…';
         });
         window.addEventListener('pageshow', () => {
+            if (!form.dataset.submitting) return;
             delete form.dataset.submitting;
-            form.querySelector('button[type="submit"]').disabled = false;
+            button.disabled = originallyDisabled;
+            button.removeAttribute('aria-busy');
+            button.textContent = originalLabel;
         });
     });
 

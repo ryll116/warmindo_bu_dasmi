@@ -14,13 +14,13 @@ class UserManagementTest extends AdminDatabaseTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->admin = User::factory()->admin()->create();
+        $this->admin = User::factory()->create(['role' => 'superAdmin']);
         $this->actingAs($this->admin);
     }
 
-    public function test_admin_creates_both_roles_with_hashed_passwords(): void
+    public function test_super_admin_creates_all_three_roles_with_hashed_passwords(): void
     {
-        foreach (['admin', 'kasir'] as $role) {
+        foreach (['admin', 'kasir', 'superAdmin'] as $role) {
             $payload = $this->payload(['email' => $role.'@example.test', 'role' => $role]);
             $this->post(route('admin.users.store'), $payload)->assertRedirect(route('admin.users.index'));
             $user = User::where('email', $payload['email'])->firstOrFail();
@@ -53,8 +53,9 @@ class UserManagementTest extends AdminDatabaseTestCase
 
     public function test_last_admin_cannot_be_deleted_or_demoted(): void
     {
-        $this->delete(route('admin.users.destroy', $this->admin))->assertSessionHasErrors(['user' => 'Admin terakhir tidak dapat dihapus.']);
-        $this->put(route('admin.users.update', $this->admin), $this->payload(['email' => $this->admin->email]))->assertSessionHasErrors(['role' => 'Admin terakhir tidak dapat diubah menjadi Kasir.']);
+        $lastAdmin = User::factory()->admin()->create();
+        $this->delete(route('admin.users.destroy', $lastAdmin))->assertSessionHasErrors(['user' => 'Admin terakhir tidak dapat dihapus.']);
+        $this->put(route('admin.users.update', $lastAdmin), $this->payload(['email' => $lastAdmin->email]))->assertSessionHasErrors(['role' => 'Admin terakhir tidak dapat diubah menjadi Kasir.']);
         $this->assertSame(1, User::where('role', 'admin')->count());
         $this->assertAuthenticatedAs($this->admin);
     }
@@ -64,11 +65,12 @@ class UserManagementTest extends AdminDatabaseTestCase
         User::factory()->admin()->create();
         $this->delete(route('admin.users.destroy', $this->admin))->assertSessionHasErrors(['user' => 'Akun yang sedang digunakan tidak dapat dihapus.']);
         $this->put(route('admin.users.update', $this->admin), $this->payload(['email' => $this->admin->email]))->assertSessionHasErrors('role');
-        $this->assertSame('admin', $this->admin->fresh()->role);
+        $this->assertSame('superAdmin', $this->admin->fresh()->role);
     }
 
     public function test_admin_can_demote_or_delete_other_accounts_while_an_admin_remains(): void
     {
+        User::factory()->admin()->create();
         $other = User::factory()->admin()->create();
         $this->put(route('admin.users.update', $other), $this->payload(['email' => $other->email]))->assertRedirect(route('admin.users.index'));
         $this->assertTrue($other->fresh()->isKasir());
@@ -83,8 +85,8 @@ class UserManagementTest extends AdminDatabaseTestCase
     public function test_self_profile_and_password_update_keeps_session_usable(): void
     {
         Auth::forgetGuards();
-        $this->post(route('login.store'), ['email' => $this->admin->email, 'password' => 'password'])->assertRedirect(route('admin.products.index'));
-        $this->put(route('admin.users.update', $this->admin), $this->payload(['role' => 'admin']))->assertRedirect(route('admin.users.index'));
+        $this->post(route('login.store'), ['email' => $this->admin->email, 'password' => 'password'])->assertRedirect(route('admin.orders.index'));
+        $this->put(route('admin.users.update', $this->admin), $this->payload(['role' => 'superAdmin']))->assertRedirect(route('admin.users.index'));
         Auth::forgetGuards();
         $this->get(route('admin.users.index'))->assertOk()->assertSee('Test User');
         $this->assertTrue(Hash::check('new-password-123', $this->admin->fresh()->password));

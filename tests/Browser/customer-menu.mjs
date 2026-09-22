@@ -190,7 +190,7 @@ try {
     assert.ok(await evaluate('document.body.textContent.includes("Rp15.000")'));
     assert.ok(await evaluate('localStorage.getItem("warmindo:cart:v1:valid-menu-token") !== null'), 'Review cleared cart');
     const reviewUrl = await evaluate('location.href');
-    await evaluate('document.getElementById("customer-name").value = "Evan"; document.getElementById("order-notes").value = "Tidak pedas"; document.getElementById("customer-name").value = "Evan"; document.querySelector("#checkout-submit button").click()');
+    await evaluate('document.getElementById("customer-name").value = "Evan"; document.getElementById("order-notes").value = "Tidak pedas"; document.getElementById("customer-name").value = "Evan"; document.getElementById("payment-cash").checked = true; document.querySelector("#checkout-submit button").click()');
     await until(() => evaluate('document.readyState === "complete" && !!document.getElementById("checkout-success")'), 'Checkout success did not load');
     assert.ok(await evaluate('document.body.textContent.includes("pending") && document.body.textContent.includes("unpaid")'));
     assert.equal(await evaluate('localStorage.getItem("warmindo:cart:v1:valid-menu-token")'), null, 'Successful checkout did not clear cart');
@@ -201,7 +201,7 @@ try {
     await navigate(successUrl, false);
     assert.ok(await evaluate('localStorage.getItem("warmindo:cart:v1:valid-menu-token") !== null'), 'Reopening success erased a new cart');
     await navigate(reviewUrl, false);
-    await evaluate('document.getElementById("customer-name").value = "Evan"; document.querySelector("#checkout-submit button").click()');
+    await evaluate('document.getElementById("customer-name").value = "Evan"; document.getElementById("payment-cash").checked = true; document.querySelector("#checkout-submit button").click()');
     await until(() => evaluate('document.readyState === "complete" && !!document.getElementById("checkout-success")'), 'Retry did not return success');
     assert.ok(await evaluate('localStorage.getItem("warmindo:cart:v1:valid-menu-token") !== null'), 'Retry of an old order erased a new cart');
     console.log('PASS checkout review, notes, success, cart clearing, success revisit and retry');
@@ -237,6 +237,34 @@ try {
     await navigate(origin + '/admin/orders?tab=completed', false);
     assert.equal(await evaluate('document.querySelectorAll("#orders-list article").length'), 1);
     console.log('PASS cashier polling, responsive layout, detail, status flow, manual QRIS payment and completed tab');
+    const receiptUrl = await evaluate('document.querySelector("#orders-list a[href$=\\"/receipt\\"]").href');
+    await navigate(receiptUrl, false);
+    assert.ok(await evaluate('document.querySelector(".receipt").textContent.includes("Evan") && document.querySelector(".receipt").textContent.includes("QRIS Manual") && document.querySelector(".receipt").textContent.includes("Rp45.000")'));
+    assert.equal(await evaluate('document.querySelectorAll(".receipt-item").length'), 2);
+    await evaluate('window.printCalls = 0; window.print = () => window.printCalls++; document.getElementById("print-receipt").click();');
+    assert.equal(await evaluate('window.printCalls'), 1, 'Print button must invoke window.print');
+    await evaluate('document.querySelector(".receipt-item h2").textContent = "Indomie Spesial ".repeat(15) + "X".repeat(100);');
+    for (const width of [360, 768, 1440]) {
+        await cdp('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width === 360 });
+        assert.ok(await evaluate('document.documentElement.scrollWidth <= innerWidth'), 'Receipt screen overflow at ' + width);
+    }
+    await cdp('Emulation.setEmulatedMedia', { media: 'print' });
+    await cdp('Emulation.setDeviceMetricsOverride', { width: 303, height: 900, deviceScaleFactor: 1, mobile: false });
+    assert.ok(await evaluate(`(() => {
+        const receipt = document.querySelector('.receipt');
+        const hidden = ['.admin-sidebar', '.navbar', '.receipt-actions', '.demo-watermark'];
+        return hidden.every(selector => getComputedStyle(document.querySelector(selector)).display === 'none')
+            && receipt.scrollWidth <= receipt.clientWidth
+            && receipt.getBoundingClientRect().width <= 303
+            && document.querySelector('.receipt-item h2').getBoundingClientRect().height > 36;
+    })()`), 'Print must hide unrelated UI and wrap long names within 80mm');
+    await writeFile(path.join(output, 'receipt-print.png'), Buffer.from((await cdp('Page.captureScreenshot', { captureBeyondViewport: true })).data, 'base64'));
+    await evaluate('const items = document.querySelector(".receipt-items"); for (let i = 0; i < 30; i++) items.append(items.lastElementChild.cloneNode(true));');
+    assert.ok(await evaluate('document.querySelector(".receipt").getBoundingClientRect().height > 900 && document.querySelector(".receipt").scrollWidth <= document.querySelector(".receipt").clientWidth'), 'Long receipt must grow without horizontal clipping');
+    await cdp('Emulation.setEmulatedMedia', { media: 'screen' });
+    await cdp('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
+    await navigate(origin + '/admin/orders?tab=completed', false);
+    console.log('PASS receipt values, print action, 80mm print CSS, long names, long receipts and hidden dashboard/watermark');
     assert.equal(await evaluate('document.querySelectorAll("#order-notifications .toast").length'), 0, 'Old orders triggered a toast');
     const newOrderIds = await evaluate(`(async () => {
         const ids = [];
@@ -246,7 +274,7 @@ try {
             const review = await fetch('/menu/valid-menu-token/checkout/review', {method:'POST', body: new URLSearchParams({_token:csrf, 'items[0][product_id]':'1', 'items[0][quantity]':'3'})});
             const document = new DOMParser().parseFromString(await review.text(), 'text/html');
             const token = document.querySelector('input[name="checkout_token"]').value;
-            const result = await fetch('/menu/valid-menu-token/checkout', {method:'POST', body:new URLSearchParams({_token:csrf, checkout_token:token, customer_name:"Evan"})});
+            const result = await fetch('/menu/valid-menu-token/checkout', {method:'POST', body:new URLSearchParams({_token:csrf, checkout_token:token, customer_name:"Evan", payment_type:"cash"})});
             if (!result.ok || !result.url.includes('/success')) throw new Error('Notification fixture checkout failed');
             ids.push(token);
         }

@@ -27,7 +27,18 @@
             <input id="customer-name" name="customer_name" class="form-control mb-3" required maxlength="100" autocomplete="name" value="{{ old('customer_name') }}">
             <label for="order-notes" class="form-label">Catatan pesanan (opsional)</label>
             <textarea id="order-notes" name="notes" class="form-control" rows="3" maxlength="1000" placeholder="Contoh: Indomie jangan pedas">{{ old('notes') }}</textarea>
-            <p class="small text-secondary mt-3">Pembayaran dilakukan di kasir setelah pesanan berhasil dibuat.</p>
+            <fieldset class="my-4">
+                <legend class="h6">Metode Pembayaran</legend>
+                <label class="d-flex gap-3 border rounded p-3 mb-2" for="payment-cash">
+                    <input id="payment-cash" class="form-check-input flex-shrink-0" type="radio" name="payment_type" value="cash" required @checked(old('payment_type') === 'cash')>
+                    <span><strong class="d-block">Bayar di Kasir</strong><span class="small text-secondary">Bayar langsung di kasir setelah membuat pesanan.</span></span>
+                </label>
+                <label class="d-flex gap-3 border rounded p-3" for="payment-qris">
+                    <input id="payment-qris" class="form-check-input flex-shrink-0" type="radio" name="payment_type" value="qris_manual" required @checked(old('payment_type') === 'qris_manual')>
+                    <span><strong class="d-block">Bayar dari HP (QRIS)</strong><span class="small text-secondary">Bayar menggunakan QRIS dari HP Anda.</span><span class="d-block small text-secondary">Demo: QRIS belum terhubung.</span></span>
+                </label>
+                @error('payment_type')<p class="text-danger small mt-2" role="alert">{{ $message }}</p>@enderror
+            </fieldset>
             <button type="submit" class="btn btn-dark w-100 py-3">Pesan Sekarang</button>
         </form>
     </main>
