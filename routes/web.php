@@ -36,6 +36,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin,kasir,su
         Route::view('/dashboard', 'admin.placeholder', ['title' => 'Dashboard'])->name('dashboard');
         Route::resource('categories', CategoryController::class)->except('show');
         Route::resource('tables', TableController::class)->except('show');
+        Route::get('/reports/sales/export', [SalesReportController::class, 'export'])->name('reports.sales.export');
         Route::get('/reports/sales', SalesReportController::class)->name('reports.sales');
         Route::get('/tables/{table}/qr', [TableQrController::class, 'show'])->name('tables.qr');
         Route::get('/tables/{table}/qr/download', [TableQrController::class, 'download'])->name('tables.qr.download');

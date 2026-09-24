@@ -4,6 +4,7 @@ namespace Tests\Feature\Admin;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\Resto;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -178,11 +179,84 @@ class ProductCrudTest extends AdminDatabaseTestCase
         }
     }
 
+    public function test_resto_is_required_and_must_exist_on_create_and_update(): void
+    {
+        $resto = Resto::factory()->create();
+        $product = Product::factory()->create(['resto_id' => $resto->id]);
+        foreach ([null, '', 999999, 'invalid', []] as $invalid) {
+            $payload = $this->payload(['resto_id' => $invalid]);
+            $this->post(route('admin.products.store'), $payload)->assertSessionHasErrors('resto_id');
+            $this->put(route('admin.products.update', $product), $payload)->assertSessionHasErrors('resto_id');
+            $this->assertSame($resto->id, $product->fresh()->resto_id);
+        }
+        $payload = $this->payload();
+        unset($payload['resto_id']);
+        $this->post(route('admin.products.store'), $payload)->assertSessionHasErrors('resto_id');
+        $this->put(route('admin.products.update', $product), $payload)->assertSessionHasErrors('resto_id');
+        $this->assertDatabaseCount('products', 1);
+    }
+
+    public function test_resto_is_selected_preserved_and_can_be_changed_without_losing_other_fields(): void
+    {
+        $resto = Resto::factory()->create();
+        $other = Resto::factory()->create();
+        $product = Product::factory()->create(['resto_id' => $resto->id]);
+        $this->get(route('admin.products.create'))->assertOk()->assertSee('Resto / Penyedia')->assertSee($resto->resto_name)->assertSee($other->resto_name);
+        $this->get(route('admin.products.edit', $product))->assertOk()->assertSee('value="'.$resto->id.'" selected', false);
+        $payload = $product->only(['product_code', 'category_id', 'resto_id', 'product_name', 'price', 'is_available']);
+        $this->put(route('admin.products.update', $product), $payload)->assertSessionHas('success');
+        $this->assertDatabaseHas('products', ['id' => $product->id] + $payload);
+        $payload['resto_id'] = $other->id;
+        $this->put(route('admin.products.update', $product), $payload)->assertSessionHas('success');
+        $this->assertDatabaseHas('products', ['id' => $product->id] + $payload);
+        $this->assertTrue($product->fresh()->resto->is($other));
+        $this->assertTrue($other->products()->firstOrFail()->is($product));
+        $this->from(route('admin.products.edit', $product))->put(route('admin.products.update', $product), array_replace($payload, ['resto_id' => $resto->id, 'price' => -1]))->assertSessionHasErrors('price');
+        $this->get(route('admin.products.edit', $product))->assertSee('value="'.$resto->id.'" selected', false);
+    }
+
+    public function test_same_product_name_can_be_created_for_different_restos(): void
+    {
+        $payload = $this->payload();
+        $this->post(route('admin.products.store'), $payload)->assertSessionHas('success');
+        $second = $this->payload(['product_code' => 'SECOND', 'product_name' => $payload['product_name']]);
+        $this->post(route('admin.products.store'), $second)->assertSessionHas('success');
+        $this->assertDatabaseHas('products', $payload);
+        $this->assertDatabaseHas('products', $second);
+        $this->assertDatabaseCount('products', 2);
+    }
+
+    public function test_index_eager_loads_resto_and_handles_legacy_products(): void
+    {
+        $resto = Resto::factory()->create(['resto_name' => '<Resto Aman>']);
+        Product::factory()->create(['resto_id' => $resto->id]);
+        Product::factory()->create();
+        DB::enableQueryLog();
+        $response = $this->get(route('admin.products.index'))->assertOk()->assertSee('&lt;Resto Aman&gt;', false)->assertSee('Belum ditentukan');
+        $queries = count(DB::getQueryLog());
+        foreach ($response->viewData('products') as $product) {
+            $this->assertTrue($product->relationLoaded('resto'));
+            $this->assertTrue($product->relationLoaded('category'));
+        }
+        Product::factory()->count(8)->create(['resto_id' => $resto->id]);
+        DB::flushQueryLog();
+        $this->get(route('admin.products.index'))->assertOk();
+        $this->assertSame($queries, count(DB::getQueryLog()));
+        DB::disableQueryLog();
+    }
+
+    public function test_missing_resto_master_data_is_explained(): void
+    {
+        Category::factory()->create();
+        $this->get(route('admin.products.create'))->assertOk()->assertSee('Belum ada resto.');
+    }
+
     private function payload(array $overrides = []): array
     {
         return array_replace([
             'product_code' => 'PRD-TEST',
             'category_id' => Category::factory()->create()->id,
+            'resto_id' => Resto::factory()->create()->id,
             'product_name' => 'Indomie Goreng',
             'price' => '12000.50',
             'is_available' => '1',

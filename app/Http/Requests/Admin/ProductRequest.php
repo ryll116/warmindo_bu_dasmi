@@ -20,6 +20,7 @@ class ProductRequest extends FormRequest
         return [
             'product_code' => ['required', 'string', 'max:255', Rule::unique('products', 'product_code')->ignore($product instanceof Product ? $product : null)],
             'category_id' => ['required', 'integer', Rule::exists('categories', 'id')],
+            'resto_id' => ['required', 'integer', Rule::exists('master_resto', 'id')],
             'product_name' => ['required', 'string', 'max:255'],
             'price' => ['required', 'numeric', 'decimal:0,2', 'min:0', 'max:9999999999.99'],
             'is_available' => ['required', 'boolean'],
@@ -32,6 +33,8 @@ class ProductRequest extends FormRequest
             'required' => ':attribute wajib diisi.',
             'string' => ':attribute harus berupa teks.',
             'product_code.unique' => 'Product Code sudah digunakan oleh produk lain.',
+            'resto_id.integer' => 'Pilih resto yang valid.',
+            'resto_id.exists' => 'Resto yang dipilih tidak ditemukan.',
             'category_id.integer' => 'Pilih kategori yang valid.',
             'category_id.exists' => 'Kategori yang dipilih tidak ditemukan.',
             'product_code.max' => 'Product Code maksimal 255 karakter.',
@@ -49,6 +52,7 @@ class ProductRequest extends FormRequest
         return [
             'product_code' => 'Product Code',
             'category_id' => 'Category',
+            'resto_id' => 'Resto / Penyedia',
             'product_name' => 'Product Name',
             'price' => 'Price',
             'is_available' => 'Is Available',

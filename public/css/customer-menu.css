@@ -37,6 +37,8 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid 
 .search-summary { font-size: 12px; overflow-wrap: anywhere; }
 .search-summary a { color: var(--menu-accent); display: inline-block; padding: 6px 0; }
 .product-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 10px; }
+.menu-category-section + .menu-category-section { margin-top: 32px; }
+.menu-category-heading { font-size: 13px; font-weight: 650; letter-spacing: .7px; text-transform: uppercase; overflow-wrap: anywhere; margin: 0 0 16px; padding-bottom: 10px; border-bottom: 1px solid #efefeb; }
 .menu-product { min-width: 0; display: flex; flex-direction: column; border: 1px solid #edede7; border-radius: 13px; overflow: hidden; background: #fff; }
 .product-image { background: #f7f4ef; aspect-ratio: 1; overflow: hidden; }
 .product-image img { display: block; width: 100%; height: 100%; object-fit: cover; }

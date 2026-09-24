@@ -36,6 +36,10 @@ abstract class AdminDatabaseTestCase extends TestCase
             $table->boolean('is_available')->default(true);
             $table->timestamps();
         });
+        (require database_path('migrations/2026_09_23_021007_create_master_resto_table.php'))->up();
+        (require database_path('migrations/2026_09_23_021820_update_products_table.php'))->up();
+        (require database_path('migrations/2026_09_23_024414_fix_products_resto_foreign_key.php'))->up();
+
         Schema::create('tables', function (Blueprint $table): void {
             $table->id();
             $table->integer('table_no');
@@ -50,5 +54,6 @@ abstract class AdminDatabaseTestCase extends TestCase
             $table->id();
             $table->foreignId('product_id')->constrained();
         });
+        (require database_path('migrations/2026_09_23_030903_add_resto_snapshot_to_order_items_table.php'))->up();
     }
 }

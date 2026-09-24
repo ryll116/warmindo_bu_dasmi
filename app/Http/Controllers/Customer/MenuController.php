@@ -45,6 +45,8 @@ class MenuController extends Controller
                 ],
             ]);
 
-        return view('customer.menu', compact('table', 'products', 'categories', 'catalog', 'search', 'categoryId'));
+        $productsByCategory = $categoryId === null ? $products->groupBy('category_id') : collect();
+
+        return view('customer.menu', compact('table', 'products', 'categories', 'catalog', 'search', 'categoryId', 'productsByCategory'));
     }
 }

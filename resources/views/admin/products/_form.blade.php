@@ -2,7 +2,20 @@
 @if ($categories->isEmpty())
     <div class="alert alert-warning" role="alert">Belum ada kategori. Siapkan data kategori terlebih dahulu sebelum menyimpan produk.</div>
 @endif
+@if ($restos->isEmpty())
+    <div class="alert alert-warning" role="alert">Belum ada resto. Siapkan data master resto terlebih dahulu sebelum menyimpan produk.</div>
+@endif
 <div class="row g-4">
+    <div class="col-md-6">
+        <label for="resto_id" class="form-label">Resto / Penyedia</label>
+        <select id="resto_id" name="resto_id" class="form-select @error('resto_id') is-invalid @enderror" required aria-describedby="resto_id-error">
+            <option value="">Pilih Resto</option>
+            @foreach ($restos as $resto)
+                <option value="{{ $resto->id }}" @selected((string) old('resto_id', $product->resto_id) === (string) $resto->id)>{{ $resto->resto_name }}</option>
+            @endforeach
+        </select>
+        @error('resto_id') <div class="invalid-feedback" id="resto_id-error">{{ $message }}</div> @enderror
+    </div>
     <div class="col-md-6">
         <label for="product_code" class="form-label">Product Code</label>
         <input type="text" id="product_code" name="product_code" class="form-control @error('product_code') is-invalid @enderror" value="{{ old('product_code', $product->product_code) }}" maxlength="255" required aria-describedby="product_code-error">
@@ -39,6 +52,6 @@
     </div>
 </div>
 <div class="d-flex flex-wrap gap-2 border-top mt-4 pt-4">
-    <button type="submit" class="btn btn-primary" @disabled($categories->isEmpty())>{{ $submitLabel }}</button>
+    <button type="submit" class="btn btn-primary" @disabled($categories->isEmpty() || $restos->isEmpty())>{{ $submitLabel }}</button>
     <a href="{{ route('admin.products.index') }}" class="btn btn-outline-secondary">Batal</a>
 </div>

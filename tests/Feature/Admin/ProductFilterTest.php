@@ -4,6 +4,7 @@ namespace Tests\Feature\Admin;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\Resto;
 use App\Models\User;
 use PHPUnit\Framework\Attributes\DataProvider;
 
@@ -97,6 +98,9 @@ class ProductFilterTest extends AdminDatabaseTestCase
     public static function invalidFilters(): array
     {
         return [
+            [['resto' => 999], 'resto'],
+            [['resto' => 'abc'], 'resto'],
+            [['resto' => ['bad']], 'resto'],
             [['search' => ['bad']], 'search'],
             [['search' => str_repeat('x', 256)], 'search'],
             [['category' => 999], 'category'],
@@ -104,5 +108,24 @@ class ProductFilterTest extends AdminDatabaseTestCase
             [['status' => 'wrong'], 'status'],
             [['page' => 0], 'page'],
         ];
+    }
+
+    public function test_resto_filter_combines_with_existing_filters_and_pagination(): void
+    {
+        $resto = Resto::factory()->create();
+        $other = Resto::factory()->create();
+        $category = Category::factory()->create();
+        Product::factory()->count(16)->create(['category_id' => $category->id, 'resto_id' => $resto->id, 'product_name' => 'Es Teh']);
+        Product::factory()->create(['category_id' => $category->id, 'resto_id' => $other->id, 'product_name' => 'Es Teh']);
+        Product::factory()->create(['category_id' => $category->id, 'resto_id' => $resto->id, 'product_name' => 'Es Teh', 'is_available' => false]);
+        $filters = ['resto' => (string) $resto->id, 'search' => 'teh', 'category' => (string) $category->id, 'status' => 'active'];
+        $response = $this->get(route('admin.products.index', $filters))->assertOk()->assertSee('Semua Resto')
+            ->assertViewHas('products', fn ($products): bool => $products->total() === 16 && $products->every(fn (Product $product): bool => $product->resto_id === $resto->id));
+        $next = $response->viewData('products')->nextPageUrl();
+        parse_str(parse_url($next, PHP_URL_QUERY), $query);
+        $this->assertSame($filters + ['page' => '2'], $query);
+        $this->get($next)->assertOk()->assertViewHas('products', fn ($products): bool => $products->count() === 1);
+        $this->get(route('admin.products.index', ['resto' => $other->id]))->assertOk()
+            ->assertViewHas('products', fn ($products): bool => $products->total() === 1);
     }
 }

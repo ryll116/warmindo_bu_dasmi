@@ -31,18 +31,20 @@ class OrderItemController extends Controller
     {
         DB::transaction(function () use ($request, $order): void {
             $locked = $this->editableOrder($order);
-            $product = Product::whereKey($request->validated('product_id'))->where('is_available', true)
+            $product = Product::with('resto')->whereKey($request->validated('product_id'))->where('is_available', true)
                 ->whereHas('category', fn (Builder $query): Builder => $query->where(fn (Builder $query): Builder => $query->where('status', 'active')->orWhereNull('status')))
                 ->lockForUpdate()->first();
             if (! $product) {
                 throw ValidationException::withMessages(['product_id' => 'Menu sudah tidak tersedia.']);
             }
-            $line = $locked->items()->where('product_id', $product->id)->lockForUpdate()->first();
+            $line = $locked->items()->where('product_id', $product->id)->where('resto_id', $product->resto_id)->lockForUpdate()->first();
             if (! $line) {
                 $line = new OrderItem;
                 $line->order()->associate($locked);
                 $line->product_id = $product->id;
                 $line->product_name = $product->product_name;
+                $line->resto_id = $product->resto_id;
+                $line->resto_name = $product->resto?->resto_name;
                 $line->price = $product->price;
                 $line->qty = 0;
             }

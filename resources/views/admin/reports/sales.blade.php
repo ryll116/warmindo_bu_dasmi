@@ -1,7 +1,10 @@
 @extends('layouts.admin')
 @section('title', 'Laporan Penjualan')
 @section('content')
-    <h1 class="h3 fw-bold">Laporan Penjualan</h1>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <h1 class="h3 fw-bold mb-0">Laporan Penjualan</h1>
+        <a href="{{ route('admin.reports.sales.export', $exportFilters) }}" class="btn btn-outline-primary">Export Excel</a>
+    </div>
     <p class="text-secondary">Transaksi lunas berdasarkan waktu pembayaran (WIB), {{ $start->format('d/m/Y') }} – {{ $end->format('d/m/Y') }}.</p>
     <form method="GET" action="{{ route('admin.reports.sales') }}" class="card card-body border-0 shadow-sm mb-4">
         <div class="row g-3 align-items-end">
@@ -11,6 +14,13 @@
             <div class="col-6 col-md-4 col-xl-2"><label for="report-start" class="form-label">Tanggal awal</label><input id="report-start" type="date" name="start" value="{{ $start->format('Y-m-d') }}" class="form-control" disabled></div>
             <div class="col-6 col-md-4 col-xl-2"><label for="report-end" class="form-label">Tanggal akhir</label><input id="report-end" type="date" name="end" value="{{ $end->format('Y-m-d') }}" class="form-control" disabled></div>
             <div class="col-12 col-md-8 col-xl-4"><label for="report-search" class="form-label">Nama customer / nomor meja</label><input id="report-search" name="search" value="{{ $search }}" maxlength="100" class="form-control" placeholder="Contoh: Evan atau 05"></div>
+            <div class="col-12 col-md-4 col-xl-3">
+                <label for="report-resto" class="form-label">Resto</label>
+                <select id="report-resto" name="resto" class="form-select">
+                    <option value="">Semua Resto</option>
+                    @foreach ($restos as $resto)<option value="{{ $resto->id }}" @selected($restoId === $resto->id)>{{ $resto->resto_name }}</option>@endforeach
+                </select>
+            </div>
             <div class="col-12 col-md-4 col-xl-2 d-flex gap-2"><button type="submit" class="btn btn-primary">Terapkan</button><a href="{{ route('admin.reports.sales') }}" class="btn btn-outline-secondary">Reset</a></div>
         </div>
         <p class="small text-secondary mt-2 mb-0">Tanggal manual digunakan untuk Custom Date Range. Pencarian berlaku untuk seluruh laporan.</p>
@@ -20,10 +30,28 @@
             <div class="col-12 col-sm-6 col-xl-3"><div class="card card-body border-0 shadow-sm h-100"><h2 class="h6 text-secondary">{{ $label }}</h2><p class="fs-4 fw-semibold text-break mb-0">{{ $value }}</p></div></div>
         @endforeach
     </div>
+    @if ($restoId !== null)
+        <p class="small text-secondary">Revenue dan jumlah item hanya dari resto terpilih. Transaksi dihitung sekali per order yang memuat resto tersebut; rata-rata = revenue resto / jumlah transaksi.</p>
+    @endif
+    <section class="card card-body border-0 shadow-sm mb-4" aria-labelledby="resto-revenue-title">
+        <h2 id="resto-revenue-title" class="h5">Revenue per Resto</h2>
+        <p class="small text-secondary">Berdasarkan subtotal item transaksi lunas. KPI Semua Resto tetap memakai total order.</p>
+        <p class="small text-secondary">Data sebelum snapshot memakai penyedia saat backfill development; atribusi historis lama tidak dapat dipastikan. Item tanpa snapshot ditampilkan sebagai Belum ditentukan.</p>
+        @forelse ($restoRevenue as $resto)
+            <div class="mb-3">
+                <div class="d-flex flex-wrap justify-content-between gap-2 mb-1"><span class="text-break">{{ $resto->resto_name ?? 'Belum ditentukan' }}</span><strong>Rp{{ number_format((float) $resto->revenue, 2, ',', '.') }}</strong></div>
+                <div class="progress" role="img" aria-label="{{ $resto->resto_name ?? 'Belum ditentukan' }}: Rp{{ number_format((float) $resto->revenue, 2, ',', '.') }}">
+                    <div class="progress-bar" style="width: {{ max(0, (float) $resto->revenue) / max(1, (float) $restoRevenue->max('revenue')) * 100 }}%"></div>
+                </div>
+            </div>
+        @empty
+            <p class="text-secondary mb-0">Belum ada revenue resto pada periode ini.</p>
+        @endforelse
+    </section>
     <div class="row g-3 mb-4">
         <section class="col-12 col-lg-7"><div class="card card-body border-0 shadow-sm h-100"><h2 class="h5 mb-3">Top 10 Produk Terlaris</h2>
             <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Nama Produk</th><th class="text-end">Quantity</th><th class="text-end">Total Penjualan</th></tr></thead><tbody>
-                @forelse ($topProducts as $product)<tr><td>{{ $product->product_name }}</td><td class="text-end">{{ $product->quantity }}</td><td class="text-end text-nowrap">Rp{{ number_format((float) $product->revenue, 2, ',', '.') }}</td></tr>
+                @forelse ($topProducts as $product)<tr><td>{{ $product->product_name }}<small class="d-block text-secondary">{{ $product->resto_name ?? 'Belum ditentukan' }}</small></td><td class="text-end">{{ $product->quantity }}</td><td class="text-end text-nowrap">Rp{{ number_format((float) $product->revenue, 2, ',', '.') }}</td></tr>
                 @empty<tr><td colspan="3" class="text-secondary py-4">Belum ada produk terjual pada periode ini.</td></tr>@endforelse
             </tbody></table></div>
         </div></section>
@@ -35,10 +63,10 @@
         </div></section>
     </div>
     <section class="card border-0 shadow-sm"><h2 class="h5 p-3 mb-0">Riwayat Transaksi Lunas</h2>
-        <div class="table-responsive"><table class="table align-middle mb-0"><thead class="table-light"><tr><th>Waktu Pembayaran (WIB)</th><th>Customer</th><th>Meja</th><th>Item</th><th>Total</th><th>Metode</th><th>Status</th></tr></thead><tbody>
+        <div class="table-responsive"><table class="table align-middle mb-0"><thead class="table-light"><tr><th>Waktu Pembayaran (WIB)</th><th>Customer</th><th>Meja</th><th>Item</th><th>{{ $restoId === null ? 'Total' : 'Revenue Resto' }}</th><th>Metode</th><th>Status</th></tr></thead><tbody>
             @forelse ($orders as $order)<tr>
                 <td class="text-nowrap">{{ Carbon\CarbonImmutable::parse($order->payment_time, config('app.timezone'))->setTimezone($timezone)->format('d/m/Y H:i') }}</td>
-                <td>{{ $order->customer_name ?: 'Nama belum tersedia' }}</td><td>{{ str_pad((string) $order->table?->table_no, 2, '0', STR_PAD_LEFT) }}</td><td>{{ $order->item_quantity ?? 0 }}</td><td class="text-nowrap">Rp{{ number_format((float) $order->total, 2, ',', '.') }}</td><td>{{ ['cash' => 'Cash', 'qris_manual' => 'QRIS'][$order->payment_type] ?? $order->payment_type ?? 'Belum tercatat' }}</td><td><span class="badge text-bg-success">PAID</span></td>
+                <td>{{ $order->customer_name ?: 'Nama belum tersedia' }}</td><td>{{ str_pad((string) $order->table?->table_no, 2, '0', STR_PAD_LEFT) }}</td><td>{{ $order->item_quantity ?? 0 }}</td><td class="text-nowrap">Rp{{ number_format((float) ($restoId === null ? $order->total : $order->resto_total), 2, ',', '.') }}</td><td>{{ ['cash' => 'Cash', 'qris_manual' => 'QRIS'][$order->payment_type] ?? $order->payment_type ?? 'Belum tercatat' }}</td><td><span class="badge text-bg-success">PAID</span></td>
             </tr>@empty<tr><td colspan="7" class="text-center text-secondary py-4">Tidak ada transaksi lunas yang sesuai filter.</td></tr>@endforelse
         </tbody></table></div>
         @if ($orders->hasPages())<div class="card-body">{{ $orders->links('pagination::bootstrap-5') }}</div>@endif

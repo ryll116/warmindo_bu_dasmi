@@ -61,6 +61,9 @@ if (! Schema::hasTable('tables')) {
         $table->boolean('is_available');
         $table->timestamps();
     });
+    (require $root.'/database/migrations/2026_09_23_021007_create_master_resto_table.php')->up();
+    (require $root.'/database/migrations/2026_09_23_021820_update_products_table.php')->up();
+    (require $root.'/database/migrations/2026_09_23_024414_fix_products_resto_foreign_key.php')->up();
     Schema::create('tables', function (Blueprint $table): void {
         $table->id();
         $table->integer('table_no');
@@ -89,14 +92,17 @@ if (! Schema::hasTable('tables')) {
         $table->text('notes')->nullable();
         $table->timestamps();
     });
+    (require $root.'/database/migrations/2026_09_23_030903_add_resto_snapshot_to_order_items_table.php')->up();
     foreach (['valid-menu-token', 'other-menu-token', 'inactive-menu-token'] as $index => $token) {
         DB::table('tables')->insert(['table_no' => $index + 5, 'qr_token' => $token, 'is_available' => $index !== 2]);
     }
+    DB::table('master_resto')->insert([['id' => 1, 'resto_name' => 'Resto Mie'], ['id' => 2, 'resto_name' => 'Resto Minuman']]);
     foreach (['Aneka Mie', 'Minuman Segar', 'Makanan Ringan dan Camilan', 'Nasi'] as $index => $name) {
         $category = Category::create(['category_name' => $name, 'status' => 'active']);
         for ($item = 1; $item <= 6; $item++) {
             Product::create([
                 'category_id' => $category->id,
+                'resto_id' => $index % 2 + 1,
                 'product_name' => $index === 0 ? 'Indomie Goreng Telur Spesial '.$item : $name.' Pilihan '.$item,
                 'product_code' => 'TEST-'.$index.'-'.$item,
                 'price' => $item === 6 ? '17500.50' : '15000.00',

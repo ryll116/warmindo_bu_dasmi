@@ -73,6 +73,8 @@ class CheckoutController extends Controller
                     $item = new OrderItem;
                     $item->product_id = $line['product_id'];
                     $item->product_name = $line['product_name'];
+                    $item->resto_id = $line['resto_id'];
+                    $item->resto_name = $line['resto_name'];
                     $item->price = $line['price'];
                     $item->qty = $line['quantity'];
                     $item->subtotal = $line['subtotal'];
@@ -134,11 +136,11 @@ class CheckoutController extends Controller
 
     /**
      * @param  array<int, array{product_id: int, quantity: int}>  $items
-     * @return array<int, array{product_id: int, product_name: string, price: string, quantity: int, subtotal: string, subtotal_cents: int}>
+     * @return array<int, array{product_id: int, product_name: string, resto_id: ?int, resto_name: ?string, price: string, quantity: int, subtotal: string, subtotal_cents: int}>
      */
     private function lines(array $items, bool $lock = false): array
     {
-        $products = Product::whereIn('id', array_column($items, 'product_id'))
+        $products = Product::with('resto')->whereIn('id', array_column($items, 'product_id'))
             ->where('is_available', true)
             ->whereHas('category', fn (Builder $query): Builder => $query->where(fn (Builder $query): Builder => $query->where('status', 'active')->orWhereNull('status')))
             ->orderBy('id')->when($lock, fn (Builder $query): Builder => $query->lockForUpdate())->get()->keyBy('id');
@@ -151,6 +153,7 @@ class CheckoutController extends Controller
             $subtotal = (int) str_replace('.', '', $product->price) * $item['quantity'];
             $lines[] = [
                 'product_id' => $product->id, 'product_name' => $product->product_name,
+                'resto_id' => $product->resto_id, 'resto_name' => $product->resto?->resto_name,
                 'price' => $product->price, 'quantity' => $item['quantity'],
                 'subtotal' => $this->decimal($subtotal), 'subtotal_cents' => $subtotal,
             ];

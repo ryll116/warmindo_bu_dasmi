@@ -14,6 +14,7 @@
         'indexRoute' => 'admin.products.index',
         'searchPlaceholder' => 'Kode, nama produk, atau nama kategori',
         'categoryOptions' => $categories,
+        'restoOptions' => $restos,
         'statusLabel' => 'Availability',
         'activeLabel' => 'Available',
         'inactiveLabel' => 'Unavailable',
@@ -26,6 +27,7 @@
                     <tr>
                         <th scope="col" class="ps-4">Product</th>
                         <th scope="col">Category</th>
+                        <th scope="col">Resto</th>
                         <th scope="col" class="text-end">Price</th>
                         <th scope="col">Availability</th>
                         <th scope="col" class="text-end pe-4">Actions</th>
@@ -39,6 +41,7 @@
                                 <div class="small text-secondary">{{ $product->product_code }}</div>
                             </td>
                             <td>{{ $product->category?->category_name ?? '—' }}</td>
+                            <td>{{ $product->resto?->resto_name ?? 'Belum ditentukan' }}</td>
                             <td class="text-end text-nowrap">Rp {{ number_format((float) $product->price, 2, ',', '.') }}</td>
                             <td><span class="badge rounded-pill {{ $product->is_available ? 'text-bg-success' : 'text-bg-secondary' }}">{{ $product->is_available ? 'Available' : 'Unavailable' }}</span></td>
                             <td class="pe-4">
@@ -55,8 +58,8 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="5" class="text-center py-5">
-                            @if (request()->filled('search') || request()->filled('category') || request()->filled('status'))
+                        <tr><td colspan="6" class="text-center py-5">
+                            @if (request()->filled('search') || request()->filled('category') || request()->filled('status') || request()->filled('resto'))
                                 <h2 class="h5">Tidak ada hasil yang sesuai</h2>
                                 <p class="text-secondary mb-0">Ubah pencarian atau tekan Reset untuk melihat semua data.</p>
                             @else

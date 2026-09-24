@@ -16,6 +16,17 @@
                     </select>
                 </div>
             @endisset
+            @isset($restoOptions)
+                <div class="col-12 col-md-3">
+                    <label for="resto" class="form-label">Resto / Penyedia</label>
+                    <select class="form-select" id="resto" name="resto">
+                        <option value="">Semua Resto</option>
+                        @foreach ($restoOptions as $option)
+                            <option value="{{ $option->id }}" @selected((string) request('resto') === (string) $option->id)>{{ $option->resto_name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            @endisset
             @if ($showStatus ?? true)
                 <div class="col-12 col-md-3">
                     <label for="status" class="form-label">{{ $statusLabel ?? 'Status' }}</label>

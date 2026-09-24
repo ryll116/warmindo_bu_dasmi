@@ -24,6 +24,7 @@ class SalesReportRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'resto' => ['nullable', 'integer', Rule::exists('master_resto', 'id')],
             'period' => ['nullable', Rule::in(['today', 'yesterday', 'last7', 'month', 'custom'])],
             'start' => ['required_if:period,custom', 'nullable', 'date_format:Y-m-d'],
             'end' => ['required_if:period,custom', 'nullable', 'date_format:Y-m-d', 'after_or_equal:start'],
@@ -35,6 +36,7 @@ class SalesReportRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'resto.*' => 'Pilih resto yang tersedia.',
             'period.*' => 'Pilih periode laporan yang valid.',
             'start.*' => 'Isi tanggal awal yang valid (YYYY-MM-DD).',
             'end.*' => 'Isi tanggal akhir yang valid, tidak sebelum tanggal awal.',

@@ -8,6 +8,7 @@ use App\Http\Requests\Admin\ProductRequest;
 use App\Http\Requests\Admin\UpdateProductAvailabilityRequest;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\Resto;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
@@ -20,7 +21,11 @@ class ProductController extends Controller
         $search = trim($request->validated('search') ?? '');
         $category = $request->validated('category');
         $status = $request->validated('status');
-        $query = Product::with('category');
+        $query = Product::with(['category', 'resto']);
+
+        if ($request->validated('resto') !== null) {
+            $query->where('resto_id', $request->validated('resto'));
+        }
 
         if ($search !== '') {
             $query->where(function (Builder $query) use ($search): void {
@@ -43,6 +48,7 @@ class ProductController extends Controller
         return view('admin.products.index', [
             'products' => $query->latest('id')->paginate(15)->withQueryString(),
             'categories' => Category::orderBy('category_name')->get(),
+            'restos' => Resto::orderBy('resto_name')->orderBy('id')->get(),
         ]);
     }
 
@@ -51,6 +57,7 @@ class ProductController extends Controller
         return view('admin.products.create', [
             'product' => new Product(['is_available' => true]),
             'categories' => Category::orderBy('category_name')->get(),
+            'restos' => Resto::orderBy('resto_name')->orderBy('id')->get(),
         ]);
     }
 
@@ -66,6 +73,7 @@ class ProductController extends Controller
         return view('admin.products.edit', [
             'product' => $product,
             'categories' => Category::orderBy('category_name')->get(),
+            'restos' => Resto::orderBy('resto_name')->orderBy('id')->get(),
         ]);
     }
 

@@ -23,7 +23,7 @@ class CheckoutConcurrencyTest extends AdminDatabaseTestCase
         parent::setUp();
         Schema::drop('order_items');
         Schema::drop('orders');
-        foreach (['2026_09_12_065707_create_orders_table.php', '2026_09_13_124020_create_order_items_table.php', '2026_09_16_024730_add_customer_name_to_orders_table.php'] as $migration) {
+        foreach (['2026_09_12_065707_create_orders_table.php', '2026_09_13_124020_create_order_items_table.php', '2026_09_16_024730_add_customer_name_to_orders_table.php', '2026_09_23_030903_add_resto_snapshot_to_order_items_table.php'] as $migration) {
             (require database_path('migrations/'.$migration))->up();
         }
         Table::factory()->count(4)->create();

@@ -52,31 +52,18 @@
                 @if ($search !== '')
                     <p class="search-summary">Hasil untuk “{{ $search }}” <a href="{{ route('customer.menu', array_filter(['qr_token' => $table->qr_token, 'category' => $categoryId], fn ($value) => $value !== null)) }}">Hapus pencarian</a></p>
                 @endif
-                <div class="product-grid">
-                    @forelse ($products as $product)
-                        <article class="menu-product" data-product-id="{{ $product->id }}">
-                            <div class="product-image">
-                                <img src="{{ asset('images/product-placeholder.svg') }}" alt="Ilustrasi menu, foto belum tersedia" width="240" height="240" loading="lazy" decoding="async">
-                            </div>
-                            <div class="product-content">
-                                <h2 class="product-title">{{ $product->product_name }}</h2>
-                                <p class="product-price">Rp {{ number_format((float) $product->price, str_ends_with($product->price, '.00') ? 0 : 2, ',', '.') }}</p>
-                                <p class="portion-label">per porsi</p>
-                                <div class="product-quantity" data-quantity-control="{{ $product->id }}">
-                                    <button type="button" class="quantity-button decrease" data-cart-action="decrease" data-id="{{ $product->id }}" aria-label="Kurangi {{ $product->product_name }}" hidden disabled>−</button>
-                                    <output class="quantity-value" aria-label="Jumlah {{ $product->product_name }}" hidden>0</output>
-                                    <button type="button" class="quantity-button increase" data-cart-action="increase" data-id="{{ $product->id }}" aria-label="Tambah {{ $product->product_name }}" disabled>+</button>
-                                </div>
-                            </div>
-                        </article>
-                    @empty
-                        <div class="menu-empty">
-                            <h2 class="h6">Belum ada menu yang cocok</h2>
-                            <p>Coba kata lain atau pilih kategori Semua.</p>
-                            <a href="{{ route('customer.menu', $table->qr_token) }}" class="btn btn-outline-dark btn-sm">Lihat semua menu</a>
-                        </div>
-                    @endforelse
-                </div>
+                @if ($categoryId === null && $products->isNotEmpty())
+                    @foreach ($categories as $category)
+                        @if ($productsByCategory->has($category->id))
+                            <section class="menu-category-section" aria-labelledby="menu-category-{{ $category->id }}">
+                                <h2 id="menu-category-{{ $category->id }}" class="menu-category-heading">{{ $category->category_name }}</h2>
+                                @include('customer._product-grid', ['products' => $productsByCategory->get($category->id)])
+                            </section>
+                        @endif
+                    @endforeach
+                @else
+                    @include('customer._product-grid')
+                @endif
             </section>
         </div>
         <p id="cart-feedback" class="cart-feedback" role="status" aria-live="polite" aria-atomic="true"></p>

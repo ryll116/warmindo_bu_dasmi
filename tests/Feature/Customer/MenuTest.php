@@ -9,6 +9,55 @@ use Tests\Feature\Admin\AdminDatabaseTestCase;
 
 class MenuTest extends AdminDatabaseTestCase
 {
+    public function test_all_menu_groups_products_under_their_categories_in_existing_category_order(): void
+    {
+        $table = Table::factory()->create();
+        $drinks = Category::factory()->create(['category_name' => 'Minuman']);
+        $food = Category::factory()->create(['category_name' => 'Makanan']);
+        $empty = Category::factory()->create(['category_name' => 'Kosong']);
+        $unavailable = Category::factory()->create(['category_name' => 'Habis']);
+        $inactive = Category::factory()->create(['category_name' => 'Nonaktif', 'status' => 'inactive']);
+        $tea = Product::factory()->create(['category_id' => $drinks->id, 'product_name' => 'Es Teh']);
+        $rice = Product::factory()->create(['category_id' => $food->id, 'product_name' => 'Nasi Goreng']);
+        Product::factory()->create(['category_id' => $unavailable->id, 'is_available' => false]);
+        Product::factory()->create(['category_id' => $inactive->id]);
+
+        $response = $this->get(route('customer.menu', $table->qr_token))->assertOk()
+            ->assertSeeInOrder(['id="menu-category-'.$food->id.'"', 'data-product-id="'.$rice->id.'"', 'id="menu-category-'.$drinks->id.'"', 'data-product-id="'.$tea->id.'"'], false);
+        $this->assertSame(2, substr_count($response->getContent(), 'class="menu-category-section"'));
+        $this->assertSame([$rice->id], $response->viewData('productsByCategory')->get($food->id)->modelKeys());
+        $this->assertSame([$tea->id], $response->viewData('productsByCategory')->get($drinks->id)->modelKeys());
+        foreach ([$empty, $unavailable, $inactive] as $category) {
+            $response->assertDontSee('id="menu-category-'.$category->id.'"', false);
+        }
+
+        $this->get(route('customer.menu', ['qr_token' => $table->qr_token, 'category' => $drinks->id]))->assertOk()
+            ->assertDontSee('class="menu-category-section"', false)
+            ->assertSee('data-product-id="'.$tea->id.'"', false)
+            ->assertDontSee('data-product-id="'.$rice->id.'"', false);
+    }
+
+    public function test_all_menu_search_only_renders_sections_with_matching_products_and_preserves_empty_state(): void
+    {
+        $table = Table::factory()->create();
+        $drinks = Category::factory()->create(['category_name' => 'Minuman']);
+        $extras = Category::factory()->create(['category_name' => 'Tambahan']);
+        $food = Category::factory()->create(['category_name' => 'Makanan']);
+        $tea = Product::factory()->create(['category_id' => $drinks->id, 'product_name' => 'Es Teh']);
+        $hotTea = Product::factory()->create(['category_id' => $extras->id, 'product_name' => 'Teh Hangat']);
+        $rice = Product::factory()->create(['category_id' => $food->id, 'product_name' => 'Nasi']);
+
+        $response = $this->get(route('customer.menu', ['qr_token' => $table->qr_token, 'search' => 'teh']))->assertOk()
+            ->assertSeeInOrder(['id="menu-category-'.$drinks->id.'"', 'data-product-id="'.$tea->id.'"', 'id="menu-category-'.$extras->id.'"', 'data-product-id="'.$hotTea->id.'"'], false)
+            ->assertDontSee('id="menu-category-'.$food->id.'"', false)
+            ->assertDontSee('data-product-id="'.$rice->id.'"', false);
+        $this->assertCount(3, $response->viewData('catalog'));
+        $this->assertSame(2, substr_count($response->getContent(), 'class="menu-category-section"'));
+
+        $this->get(route('customer.menu', ['qr_token' => $table->qr_token, 'search' => 'tidak-ada']))->assertOk()
+            ->assertSee('Belum ada menu yang cocok')->assertDontSee('class="menu-category-section"', false);
+    }
+
     public function test_valid_token_shows_available_products_from_active_and_unset_categories(): void
     {
         $table = Table::factory()->create(['table_no' => 5]);

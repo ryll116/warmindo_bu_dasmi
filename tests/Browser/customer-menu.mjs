@@ -297,6 +297,25 @@ try {
     await sleep(1000);
     assert.equal(await evaluate('document.querySelectorAll("#order-notifications .toast").length'), 0, 'Duplicate notification on later polling');
     console.log('PASS new-order toast, initial baseline, filtered monitoring, queue, dismiss, auto-hide, mobile bounds and deduplication');
+    await navigate(origin + '/admin/reports/sales', false);
+    assert.equal(await evaluate('document.querySelectorAll("[aria-labelledby=resto-revenue-title] .progress").length'), 2);
+    assert.ok(await evaluate('document.body.textContent.includes("Rp45.000,00")'));
+    for (const width of [360, 768, 1440]) {
+        await cdp('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width === 360 });
+        assert.ok(await evaluate('document.documentElement.scrollWidth <= innerWidth'), 'Report overflow at ' + width);
+        assert.ok(await evaluate('[...document.querySelectorAll(".progress-bar")].every(bar => bar.getBoundingClientRect().width <= bar.parentElement.getBoundingClientRect().width)'), 'Chart overflow at ' + width);
+        await writeFile(path.join(output, 'sales-report-' + width + '.png'), Buffer.from((await cdp('Page.captureScreenshot', { captureBeyondViewport: true })).data, 'base64'));
+    }
+    await evaluate('document.getElementById("report-resto").value = "1"; document.getElementById("report-resto").form.requestSubmit()');
+    await until(() => evaluate('document.readyState === "complete" && new URLSearchParams(location.search).get("resto") === "1"'), 'Resto filter did not apply');
+    assert.equal(await evaluate('document.querySelectorAll("[aria-labelledby=resto-revenue-title] .progress").length'), 1);
+    assert.ok(await evaluate('document.body.textContent.includes("Rp15.000,00") && document.body.textContent.includes("Revenue Resto")'));
+    const download = await evaluate('(async () => { const link = [...document.querySelectorAll("a")].find(a => a.href.includes("/reports/sales/export")); const response = await fetch(link.href); const bytes = new Uint8Array(await response.arrayBuffer()); return { ok: response.ok, type: response.headers.get("content-type"), signature: String.fromCharCode(...bytes.slice(0, 2)), resto: new URL(link.href).searchParams.get("resto") }; })()');
+    assert.equal(download.ok, true);
+    assert.equal(download.signature, 'PK');
+    assert.ok(download.type.includes('spreadsheetml'));
+    assert.equal(download.resto, '1');
+    console.log('PASS sales report responsive chart, mixed-resto filter and Excel download');
     await navigate(origin + '/menu/inactive-menu-token', false);
     assert.ok(await evaluate('document.body.textContent.includes("Menu belum dapat dibuka")'));
     assert.equal(exceptions.length, 0, JSON.stringify(exceptions));
