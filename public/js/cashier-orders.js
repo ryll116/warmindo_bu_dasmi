@@ -47,6 +47,82 @@
     const currency = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 });
     let monitor = list.dataset.monitor;
     let showingToast = false;
+    let actionPending = false;
+    let refreshVersion = 0;
+    const paymentModal = document.getElementById('dashboard-payment');
+    const feedback = document.getElementById('orders-action-feedback');
+
+    paymentModal.addEventListener('show.bs.modal', event => {
+        if (actionPending) {
+            event.preventDefault();
+            return;
+        }
+        const trigger = event.relatedTarget;
+        const form = paymentModal.querySelector('form');
+        form.reset();
+        form.action = trigger.dataset.paymentUrl;
+        document.getElementById('dashboard-payment-order').textContent = `${trigger.dataset.customer} — Meja ${trigger.dataset.table}`;
+        document.getElementById('dashboard-payment-total').textContent = `Rp${trigger.dataset.total}`;
+        refreshVersion++;
+    });
+    paymentModal.addEventListener('hide.bs.modal', event => {
+        if (actionPending) event.preventDefault();
+    });
+    paymentModal.addEventListener('hidden.bs.modal', () => refresh(true));
+
+    document.addEventListener('submit', async event => {
+        const form = event.target.closest('[data-dashboard-action]');
+        if (!form) return;
+        event.preventDefault();
+        if (actionPending) return;
+        actionPending = true;
+        refreshVersion++;
+        const payload = new FormData(form);
+        const button = form.querySelector('button[type="submit"]');
+        const originalLabel = button.textContent;
+        const controls = [...list.querySelectorAll('button'), ...paymentModal.querySelectorAll('button, select')];
+        controls.forEach(control => { control.disabled = true; });
+        button.textContent = 'Memproses…';
+        button.setAttribute('aria-busy', 'true');
+        feedback.className = 'alert d-none';
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST', body: payload,
+                headers: { Accept: 'application/json' },
+                signal: AbortSignal.timeout(15000),
+            });
+            let message;
+            if (response.status === 422) {
+                const data = await response.json();
+                message = Object.values(data.errors ?? {}).flat().join(' ') || 'Status pesanan berubah. Silakan periksa kembali.';
+            } else if (response.status === 401 || response.status === 419 || response.redirected) {
+                message = 'Sesi berakhir. Muat ulang halaman dan masuk kembali.';
+            } else if (response.status === 403) {
+                message = 'Anda tidak memiliki akses untuk melakukan tindakan ini.';
+            } else if (!response.ok) {
+                message = 'Tindakan belum dapat diproses. Periksa status terbaru sebelum mencoba kembali.';
+            }
+            if (message) throw new Error(message);
+            const data = await response.json();
+            feedback.textContent = data.message;
+            feedback.className = 'alert alert-success';
+        } catch (error) {
+            feedback.textContent = error instanceof TypeError || error.name === 'TimeoutError'
+                ? 'Koneksi terputus. Periksa status terbaru sebelum mencoba kembali.'
+                : error instanceof SyntaxError ? 'Respons tidak dapat dibaca. Periksa status terbaru.' : error.message;
+            feedback.className = 'alert alert-danger';
+        } finally {
+            actionPending = false;
+            controls.forEach(control => { control.disabled = false; });
+            button.textContent = originalLabel;
+            button.removeAttribute('aria-busy');
+            if (paymentModal.classList.contains('show')) {
+                bootstrap.Modal.getInstance(paymentModal).hide();
+            } else {
+                await refresh(true);
+            }
+        }
+    });
 
     function showNextToast() {
         if (showingToast || !queue.length || !window.bootstrap?.Toast) return;
@@ -89,8 +165,10 @@
         instance.show();
     }
     let pending = false;
-    async function refresh() {
-        if (pending || document.hidden || list.contains(document.activeElement)) return;
+    async function refresh(force = false) {
+        if (actionPending || paymentModal.classList.contains('show')) return;
+        if (!force && (pending || document.hidden || list.contains(document.activeElement))) return;
+        const version = ++refreshVersion;
         pending = true;
         try {
             const response = await fetch(location.href, {
@@ -99,8 +177,9 @@
             });
             if (!response.ok || response.redirected) throw new Error('Refresh failed');
             const data = await response.json();
+            if (version !== refreshVersion || actionPending || paymentModal.classList.contains('show')) return;
             monitor = data.monitor;
-            if (!list.contains(document.activeElement)) list.innerHTML = data.html;
+            if (force || !list.contains(document.activeElement)) list.innerHTML = data.html;
             for (const order of data.notifications) {
                 if (knownOrders.has(order.id)) continue;
                 knownOrders.add(order.id);
@@ -109,9 +188,9 @@
             showNextToast();
             status.textContent = `Diperbarui ${new Date().toLocaleTimeString('id-ID')}. Otomatis setiap 8 detik.`;
         } catch {
-            status.textContent = 'Pembaruan terhenti sementara. Akan dicoba kembali otomatis.';
+            if (version === refreshVersion) status.textContent = 'Pembaruan terhenti sementara. Akan dicoba kembali otomatis.';
         } finally {
-            pending = false;
+            if (version === refreshVersion) pending = false;
         }
     }
     setInterval(refresh, 8000);

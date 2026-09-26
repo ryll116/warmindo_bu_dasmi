@@ -77,12 +77,12 @@ class OrderController extends Controller
         $editable = $order->order_status === 'pending' && $order->payment_status === 'unpaid';
         $products = $editable ? Product::where('is_available', true)
             ->whereHas('category', fn (Builder $query): Builder => $query->where(fn (Builder $query): Builder => $query->where('status', 'active')->orWhereNull('status')))
-            ->orderBy('product_name')->get(['id', 'product_name', 'price']) : collect();
+            ->orderBy('product_name')->get(['id', 'product_name', 'price', 'disc']) : collect();
 
         return view('admin.orders.show', compact('order', 'products', 'editable'));
     }
 
-    public function status(OrderRequest $request, Order $order): RedirectResponse
+    public function status(OrderRequest $request, Order $order): RedirectResponse|JsonResponse
     {
         DB::transaction(function () use ($request, $order): void {
             $locked = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
@@ -94,10 +94,14 @@ class OrderController extends Controller
             $locked->save();
         });
 
+        if ($request->expectsJson()) {
+            return response()->json(['message' => 'Status pesanan berhasil diperbarui.']);
+        }
+
         return to_route('admin.orders.show', $order)->with('success', 'Status pesanan berhasil diperbarui.');
     }
 
-    public function payment(OrderRequest $request, Order $order): RedirectResponse
+    public function payment(OrderRequest $request, Order $order): RedirectResponse|JsonResponse
     {
         DB::transaction(function () use ($request, $order): void {
             $locked = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
@@ -109,6 +113,10 @@ class OrderController extends Controller
             $locked->payment_time = now();
             $locked->save();
         });
+
+        if ($request->expectsJson()) {
+            return response()->json(['message' => 'Pembayaran berhasil dicatat.']);
+        }
 
         return to_route('admin.orders.show', $order)->with('success', 'Pembayaran berhasil dicatat.');
     }

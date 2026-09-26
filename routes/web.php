@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\ManualOrderController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\OrderItemController;
 use App\Http\Controllers\Admin\ProductController;
@@ -47,6 +48,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin,kasir,su
         Route::resource('users', UserController::class)->except('show');
     });
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/create', [ManualOrderController::class, 'create'])->name('orders.create');
+    Route::post('/orders', [ManualOrderController::class, 'store'])->name('orders.store');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::get('/orders/{order}/receipt', ReceiptController::class)->name('orders.receipt');
     Route::post('/orders/{order}/items', [OrderItemController::class, 'store'])->name('orders.items.store');

@@ -30,18 +30,18 @@ class MenuController extends Controller
             ->when($search !== '', fn (Builder $query) => $query->whereLike('product_name', '%'.$search.'%'))
             ->when($categoryId !== null, fn (Builder $query) => $query->where('category_id', $categoryId))
             ->orderBy('product_name')->orderBy('id')
-            ->get(['id', 'category_id', 'product_name', 'price']);
+            ->get(['id', 'category_id', 'product_name', 'price', 'disc']);
 
         $categories = Category::where(fn (Builder $query): Builder => $query->where('status', 'active')->orWhereNull('status'))
             ->whereHas('products', fn (Builder $query) => $query->where('is_available', true))
             ->orderBy('category_name')->get(['id', 'category_name']);
 
-        $catalog = (clone $availableProducts)->get(['id', 'category_id', 'product_name', 'price'])
+        $catalog = (clone $availableProducts)->get(['id', 'category_id', 'product_name', 'price', 'disc'])
             ->mapWithKeys(fn (Product $product) => [
                 $product->id => [
                     'name' => $product->product_name,
                     'category_id' => $product->category_id,
-                    'price' => $product->price,
+                    'price' => $product->effectivePrice(),
                 ],
             ]);
 

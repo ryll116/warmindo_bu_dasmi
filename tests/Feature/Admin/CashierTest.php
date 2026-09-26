@@ -200,6 +200,73 @@ class CashierTest extends AdminDatabaseTestCase
         }
     }
 
+    public function test_dashboard_actions_share_detail_endpoints_and_refresh_current_state(): void
+    {
+        foreach (['kasir', 'admin', 'superAdmin'] as $role) {
+            $this->actingAs(User::factory()->create(['role' => $role]));
+            $order = $this->customerOrder('qris_manual');
+            $snapshot = $order->items()->firstOrFail()->getAttributes();
+            $dashboard = $this->get(route('admin.orders.index'))->assertOk()
+                ->assertSee('data-dashboard-action', false)
+                ->assertSee(route('admin.orders.status', $order))
+                ->assertSee(route('admin.orders.payment', $order))
+                ->assertSee('id="dashboard-payment"', false);
+            $headers = ['X-Orders-Partial' => '1', 'X-Order-Monitor' => $dashboard->viewData('monitor')];
+            $this->get(route('admin.orders.show', $order))->assertOk()
+                ->assertSee(route('admin.orders.status', $order))
+                ->assertSee(route('admin.orders.payment', $order))
+                ->assertSee('data-cashier-action', false);
+            $this->assertNull($order->fresh()->payment_time);
+            $this->assertSame('unpaid', $order->fresh()->payment_status);
+
+            foreach (['arbitrary', 'completed', 'pending'] as $invalid) {
+                $this->patchJson(route('admin.orders.status', $order), ['order_status' => $invalid])
+                    ->assertUnprocessable()->assertJsonValidationErrors('order_status');
+            }
+            foreach (['confirmed', 'processing', 'completed'] as $next) {
+                $this->patchJson(route('admin.orders.status', $order), ['order_status' => $next, 'total' => 1])
+                    ->assertOk()->assertJsonStructure(['message']);
+                $this->assertSame($next, $order->fresh()->order_status);
+                $this->patchJson(route('admin.orders.status', $order), ['order_status' => $next])->assertUnprocessable();
+            }
+            $this->getJson(route('admin.orders.index'), $headers)->assertOk()
+                ->assertJsonPath('notifications', [])
+                ->assertJsonMissingPath('exception');
+            $html = $this->getJson(route('admin.orders.index', ['tab' => 'completed', 'search' => $order->id]), $headers)->assertOk()->json('html');
+            $this->assertStringContainsString('Completed', $html);
+            $this->assertStringNotContainsString('name="order_status"', $html);
+            $this->assertStringContainsString('data-payment-url', $html);
+
+            $this->patchJson(route('admin.orders.payment', $order), ['payment_type' => 'qris'])->assertUnprocessable();
+            $this->freezeTime();
+            $this->patchJson(route('admin.orders.payment', $order), ['payment_type' => 'qris_manual', 'total' => 1, 'payment_time' => '2000-01-01'])
+                ->assertOk()->assertJsonStructure(['message']);
+            $this->assertDatabaseHas('orders', ['id' => $order->id, 'payment_status' => 'paid', 'payment_type' => 'qris_manual', 'payment_time' => now()->format('Y-m-d H:i:s'), 'total' => 30000]);
+            $paid = $order->fresh()->getAttributes();
+            $this->travel(1)->minutes();
+            $this->patchJson(route('admin.orders.payment', $order), ['payment_type' => 'cash'])->assertUnprocessable();
+            $this->assertSame($paid, $order->fresh()->getAttributes());
+            $this->assertSame($snapshot, $order->items()->firstOrFail()->getAttributes());
+            $html = $this->getJson(route('admin.orders.index', ['tab' => 'completed', 'search' => $order->id]), $headers)->assertOk()->json('html');
+            $this->assertStringContainsString('PAID', $html);
+            $this->assertStringNotContainsString('data-payment-url', $html);
+            $this->get(route('admin.orders.show', $order))->assertOk()->assertSee('PAID');
+            $this->travelBack();
+        }
+    }
+
+    public function test_dashboard_write_endpoints_reject_guests_and_unauthorized_roles(): void
+    {
+        $order = $this->customerOrder();
+        $this->actingAs(User::factory()->create(['role' => 'other']));
+        $this->patchJson(route('admin.orders.status', $order), ['order_status' => 'confirmed'])->assertForbidden();
+        $this->patchJson(route('admin.orders.payment', $order), ['payment_type' => 'cash'])->assertForbidden();
+        auth()->forgetGuards();
+        $this->patchJson(route('admin.orders.status', $order), ['order_status' => 'confirmed'])->assertUnauthorized();
+        $this->patchJson(route('admin.orders.payment', $order), ['payment_type' => 'cash'])->assertUnauthorized();
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'order_status' => 'pending', 'payment_status' => 'unpaid', 'payment_time' => null]);
+    }
+
     private function customerOrder(string $paymentType = 'cash'): Order
     {
         $table = Table::factory()->create(['table_no' => 5]);

@@ -8,8 +8,8 @@
         <div class="menu-container">
             <div class="menu-brand-row">
                 <div>
-                    <div class="brand">warmindo<span>.</span></div>
-                    <p class="brand-note">Makan enak, santai sejenak.</p>
+                    <div class="brand">Baji Minasa<span>.</span></div>
+                    <p class="brand-note">Coto Makassar dan Sop Konro.</p>
                 </div>
                 <span class="table-label">Meja {{ str_pad($table->table_no, 2, '0', STR_PAD_LEFT) }}</span>
             </div>

@@ -6,7 +6,12 @@
             </div>
             <div class="product-content">
                 <h2 class="product-title">{{ $product->product_name }}</h2>
-                <p class="product-price">Rp {{ number_format((float) $product->price, str_ends_with($product->price, '.00') ? 0 : 2, ',', '.') }}</p>
+                @if ($product->hasDiscount())
+                    <span class="badge text-bg-warning mb-2">PROMO {{ rtrim(rtrim($product->disc, '0'), '.') }}%</span>
+                    <div class="small text-secondary"><del>Rp {{ number_format((float) $product->price, str_ends_with($product->price, '.00') ? 0 : 2, ',', '.') }}</del></div>
+                @endif
+                @php($sellingPrice = $product->effectivePrice())
+                <p class="product-price">Rp {{ number_format((float) $sellingPrice, str_ends_with($sellingPrice, '.00') ? 0 : 2, ',', '.') }}</p>
                 <p class="portion-label">per porsi</p>
                 <div class="product-quantity" data-quantity-control="{{ $product->id }}">
                     <button type="button" class="quantity-button decrease" data-cart-action="decrease" data-id="{{ $product->id }}" aria-label="Kurangi {{ $product->product_name }}" hidden disabled>−</button>

@@ -10,7 +10,7 @@
     </div>
     <article class="receipt" aria-label="Struk transaksi">
         <header class="receipt-heading">
-            <h1>Warmindo Bu Dasmi</h1>
+            <h1>Baji Minasa</h1>
             <p>Struk Transaksi</p>
         </header>
         <dl class="receipt-details">

@@ -1,4 +1,4 @@
-<p class="text-secondary mb-4">Lengkapi informasi produk. Semua kolom wajib diisi.</p>
+<p class="text-secondary mb-4">Lengkapi informasi produk. Isi diskon 0 untuk produk tanpa promo.</p>
 @if ($categories->isEmpty())
     <div class="alert alert-warning" role="alert">Belum ada kategori. Siapkan data kategori terlebih dahulu sebelum menyimpan produk.</div>
 @endif
@@ -37,10 +37,16 @@
         @error('product_name') <div class="invalid-feedback" id="product_name-error">{{ $message }}</div> @enderror
     </div>
     <div class="col-md-6">
-        <label for="price" class="form-label">Price (Rp)</label>
+        <label for="price" class="form-label">Harga Dasar (Rp)</label>
         <input type="number" id="price" name="price" class="form-control @error('price') is-invalid @enderror" value="{{ old('price', $product->price) }}" min="0" max="9999999999.99" step="0.01" required aria-describedby="price-help price-error">
-        <div class="form-text" id="price-help">Harga dalam rupiah, maksimal 2 angka desimal.</div>
+        <div class="form-text" id="price-help">Harga sebelum diskon dalam rupiah, maksimal 2 angka desimal.</div>
         @error('price') <div class="invalid-feedback" id="price-error">{{ $message }}</div> @enderror
+    </div>
+    <div class="col-md-6">
+        <label for="disc" class="form-label">Diskon (%)</label>
+        <input type="number" id="disc" name="disc" class="form-control @error('disc') is-invalid @enderror" value="{{ old('disc', $product->disc ?? '0.00') }}" min="0" max="100" step="0.01" required aria-describedby="disc-help disc-error">
+        <div class="form-text" id="disc-help">Persentase potongan dari harga dasar. Isi 0 untuk menghapus promo.</div>
+        @error('disc') <div class="invalid-feedback" id="disc-error">{{ $message }}</div> @enderror
     </div>
     <div class="col-md-6">
         <label for="is_available" class="form-label">Is Available</label>

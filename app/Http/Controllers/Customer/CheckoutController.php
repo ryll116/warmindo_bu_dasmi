@@ -5,9 +5,8 @@ namespace App\Http\Controllers\Customer;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Customer\CheckoutRequest;
 use App\Models\Order;
-use App\Models\OrderItem;
-use App\Models\Product;
 use App\Models\Table;
+use App\OrderCreation;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,13 +19,15 @@ use Throwable;
 
 class CheckoutController extends Controller
 {
+    public function __construct(private OrderCreation $creation) {}
+
     public function review(CheckoutRequest $request, string $qr_token): RedirectResponse
     {
         $table = $this->availableTable($qr_token);
         $items = array_map(fn (array $item): array => [
             'product_id' => (int) $item['product_id'], 'quantity' => (int) $item['quantity'],
         ], $request->validated('items'));
-        $this->lines($items);
+        $this->creation->lines($items);
         $token = (string) Str::uuid();
         $request->session()->put('checkout_drafts.'.$token, ['table_id' => $table->id, 'items' => $items]);
 
@@ -38,11 +39,11 @@ class CheckoutController extends Controller
         try {
             $table = $this->availableTable($qr_token);
             $draft = $this->draft($request, $checkout_token, $table);
-            $lines = $this->lines($draft['items']);
+            $lines = $this->creation->lines($draft['items']);
         } catch (ValidationException $exception) {
             return to_route('customer.menu', $qr_token)->withErrors($exception->errors());
         }
-        $total = $this->decimal(array_sum(array_column($lines, 'subtotal_cents')));
+        $total = $this->creation->decimal(array_sum(array_column($lines, 'subtotal_cents')));
 
         return view('customer.checkout', compact('table', 'lines', 'total', 'checkout_token'));
     }
@@ -54,38 +55,8 @@ class CheckoutController extends Controller
                 $table = $this->availableTable($qr_token, true);
                 $token = $request->validated('checkout_token');
                 $draft = $this->draft($request, $token, $table);
-                $existing = Order::whereKey($token)->where('table_id', $table->id)->first();
-                if ($existing) {
-                    return $existing;
-                }
 
-                $lines = $this->lines($draft['items'], true);
-                $order = new Order;
-                $order->customer_name = $request->validated('customer_name');
-                $order->payment_type = $request->validated('payment_type');
-                $order->payment_status = 'unpaid';
-                $order->payment_time = null;
-                $order->id = $token;
-                $order->table()->associate($table);
-                $order->save();
-                $total = 0;
-                foreach ($lines as $line) {
-                    $item = new OrderItem;
-                    $item->product_id = $line['product_id'];
-                    $item->product_name = $line['product_name'];
-                    $item->resto_id = $line['resto_id'];
-                    $item->resto_name = $line['resto_name'];
-                    $item->price = $line['price'];
-                    $item->qty = $line['quantity'];
-                    $item->subtotal = $line['subtotal'];
-                    $item->notes = $request->validated('notes');
-                    $order->items()->save($item);
-                    $total += $line['subtotal_cents'];
-                }
-                $order->total = $this->decimal($total);
-                $order->save();
-
-                return $order;
+                return $this->creation->create($table->id, $token, $draft['items'], $request->validated('customer_name'), $request->validated('payment_type'), $request->validated('notes'));
             }, 3);
         } catch (ValidationException $exception) {
             throw $exception;
@@ -132,38 +103,5 @@ class CheckoutController extends Controller
         }
 
         return $draft;
-    }
-
-    /**
-     * @param  array<int, array{product_id: int, quantity: int}>  $items
-     * @return array<int, array{product_id: int, product_name: string, resto_id: ?int, resto_name: ?string, price: string, quantity: int, subtotal: string, subtotal_cents: int}>
-     */
-    private function lines(array $items, bool $lock = false): array
-    {
-        $products = Product::with('resto')->whereIn('id', array_column($items, 'product_id'))
-            ->where('is_available', true)
-            ->whereHas('category', fn (Builder $query): Builder => $query->where(fn (Builder $query): Builder => $query->where('status', 'active')->orWhereNull('status')))
-            ->orderBy('id')->when($lock, fn (Builder $query): Builder => $query->lockForUpdate())->get()->keyBy('id');
-        $lines = [];
-        foreach ($items as $item) {
-            $product = $products->get($item['product_id']);
-            if (! $product || ! preg_match('/^\d+\.\d{2}$/', $product->price)) {
-                throw ValidationException::withMessages(['items' => 'Ada menu yang sudah tidak tersedia atau harganya tidak valid. Silakan periksa kembali keranjang.']);
-            }
-            $subtotal = (int) str_replace('.', '', $product->price) * $item['quantity'];
-            $lines[] = [
-                'product_id' => $product->id, 'product_name' => $product->product_name,
-                'resto_id' => $product->resto_id, 'resto_name' => $product->resto?->resto_name,
-                'price' => $product->price, 'quantity' => $item['quantity'],
-                'subtotal' => $this->decimal($subtotal), 'subtotal_cents' => $subtotal,
-            ];
-        }
-
-        return $lines;
-    }
-
-    private function decimal(int $cents): string
-    {
-        return intdiv($cents, 100).'.'.str_pad((string) ($cents % 100), 2, '0', STR_PAD_LEFT);
     }
 }

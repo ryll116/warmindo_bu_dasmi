@@ -66,7 +66,7 @@
                     <label for="add-menu-product" class="form-label">Menu dan harga</label>
                     <select id="add-menu-product" name="product_id" class="form-select mb-3" required>
                         <option value="">Pilih menu</option>
-                        @foreach ($products as $product)<option value="{{ $product->id }}" data-name="{{ $product->product_name }}">{{ $product->product_name }} — Rp{{ number_format((float) $product->price, 2, ',', '.') }}</option>@endforeach
+                        @foreach ($products as $product)<option value="{{ $product->id }}" data-name="{{ $product->product_name }}">{{ $product->product_name }} — Rp{{ number_format((float) $product->effectivePrice(), 2, ',', '.') }}</option>@endforeach
                     </select>
                     <label for="add-menu-quantity" class="form-label">Quantity</label><input id="add-menu-quantity" name="quantity" type="number" min="1" max="99" value="1" required class="form-control">
                 </div>

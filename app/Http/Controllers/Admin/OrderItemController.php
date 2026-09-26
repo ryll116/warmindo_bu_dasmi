@@ -45,7 +45,7 @@ class OrderItemController extends Controller
                 $line->product_name = $product->product_name;
                 $line->resto_id = $product->resto_id;
                 $line->resto_name = $product->resto?->resto_name;
-                $line->price = $product->price;
+                $line->price = $product->effectivePrice();
                 $line->qty = 0;
             }
             $line->qty += (int) $request->validated('quantity');

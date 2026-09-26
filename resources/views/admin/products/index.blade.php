@@ -42,7 +42,13 @@
                             </td>
                             <td>{{ $product->category?->category_name ?? '—' }}</td>
                             <td>{{ $product->resto?->resto_name ?? 'Belum ditentukan' }}</td>
-                            <td class="text-end text-nowrap">Rp {{ number_format((float) $product->price, 2, ',', '.') }}</td>
+                            <td class="text-end text-nowrap">
+                                @if ($product->hasDiscount())
+                                    <span class="badge text-bg-warning">PROMO {{ rtrim(rtrim($product->disc, '0'), '.') }}%</span>
+                                    <del class="d-block small text-secondary">Rp {{ number_format((float) $product->price, 2, ',', '.') }}</del>
+                                @endif
+                                <span class="d-block">Rp {{ number_format((float) $product->effectivePrice(), 2, ',', '.') }}</span>
+                            </td>
                             <td><span class="badge rounded-pill {{ $product->is_available ? 'text-bg-success' : 'text-bg-secondary' }}">{{ $product->is_available ? 'Available' : 'Unavailable' }}</span></td>
                             <td class="pe-4">
                                 <div class="d-flex justify-content-end flex-wrap gap-2">

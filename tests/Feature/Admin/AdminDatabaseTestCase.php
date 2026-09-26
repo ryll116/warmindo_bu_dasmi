@@ -39,6 +39,7 @@ abstract class AdminDatabaseTestCase extends TestCase
         (require database_path('migrations/2026_09_23_021007_create_master_resto_table.php'))->up();
         (require database_path('migrations/2026_09_23_021820_update_products_table.php'))->up();
         (require database_path('migrations/2026_09_23_024414_fix_products_resto_foreign_key.php'))->up();
+        (require database_path('migrations/2026_09_25_032213_insert_disc_to_products_table.php'))->up();
 
         Schema::create('tables', function (Blueprint $table): void {
             $table->id();

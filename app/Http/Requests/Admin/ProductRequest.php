@@ -23,6 +23,7 @@ class ProductRequest extends FormRequest
             'resto_id' => ['required', 'integer', Rule::exists('master_resto', 'id')],
             'product_name' => ['required', 'string', 'max:255'],
             'price' => ['required', 'numeric', 'decimal:0,2', 'min:0', 'max:9999999999.99'],
+            'disc' => ['sometimes', 'required', 'numeric', 'decimal:0,2', 'min:0', 'max:100'],
             'is_available' => ['required', 'boolean'],
         ];
     }
@@ -43,6 +44,7 @@ class ProductRequest extends FormRequest
             'price.decimal' => 'Price maksimal memiliki 2 angka desimal.',
             'price.min' => 'Price tidak boleh negatif.',
             'price.max' => 'Price maksimal 9.999.999.999,99.',
+            'disc.*' => 'Diskon harus berupa persentase 0–100 dengan maksimal 2 angka desimal.',
             'is_available.boolean' => 'Pilih status ketersediaan yang valid.',
         ];
     }
