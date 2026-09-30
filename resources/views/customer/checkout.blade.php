@@ -26,7 +26,7 @@
             <label for="customer-name" class="form-label">Nama Pemesan</label>
             <input id="customer-name" name="customer_name" class="form-control mb-3" required maxlength="100" autocomplete="name" value="{{ old('customer_name') }}">
             <label for="order-notes" class="form-label">Catatan pesanan (opsional)</label>
-            <textarea id="order-notes" name="notes" class="form-control" rows="3" maxlength="1000" placeholder="Contoh: Indomie jangan pedas">{{ old('notes') }}</textarea>
+            <textarea id="order-notes" name="notes" class="form-control" rows="3" maxlength="1000" placeholder="Contoh: Jangan terlalu pedas">{{ old('notes') }}</textarea>
             <fieldset class="my-4">
                 <legend class="h6">Metode Pembayaran</legend>
                 <label class="d-flex gap-3 border rounded p-3 mb-2" for="payment-cash">

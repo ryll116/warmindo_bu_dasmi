@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Admin;
 
-use App\Models\Product;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -15,16 +14,16 @@ class ProductRequest extends FormRequest
 
     public function rules(): array
     {
-        $product = $this->route('product');
-
         return [
-            'product_code' => ['required', 'string', 'max:255', Rule::unique('products', 'product_code')->ignore($product instanceof Product ? $product : null)],
             'category_id' => ['required', 'integer', Rule::exists('categories', 'id')],
             'resto_id' => ['required', 'integer', Rule::exists('master_resto', 'id')],
             'product_name' => ['required', 'string', 'max:255'],
             'price' => ['required', 'numeric', 'decimal:0,2', 'min:0', 'max:9999999999.99'],
             'disc' => ['sometimes', 'required', 'numeric', 'decimal:0,2', 'min:0', 'max:100'],
             'is_available' => ['required', 'boolean'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'remove_image' => ['sometimes', 'boolean'],
+            'img' => ['prohibited'],
         ];
     }
 
@@ -33,12 +32,10 @@ class ProductRequest extends FormRequest
         return [
             'required' => ':attribute wajib diisi.',
             'string' => ':attribute harus berupa teks.',
-            'product_code.unique' => 'Product Code sudah digunakan oleh produk lain.',
             'resto_id.integer' => 'Pilih resto yang valid.',
             'resto_id.exists' => 'Resto yang dipilih tidak ditemukan.',
             'category_id.integer' => 'Pilih kategori yang valid.',
             'category_id.exists' => 'Kategori yang dipilih tidak ditemukan.',
-            'product_code.max' => 'Product Code maksimal 255 karakter.',
             'product_name.max' => 'Product Name maksimal 255 karakter.',
             'price.numeric' => 'Price harus berupa angka.',
             'price.decimal' => 'Price maksimal memiliki 2 angka desimal.',
@@ -46,6 +43,9 @@ class ProductRequest extends FormRequest
             'price.max' => 'Price maksimal 9.999.999.999,99.',
             'disc.*' => 'Diskon harus berupa persentase 0–100 dengan maksimal 2 angka desimal.',
             'is_available.boolean' => 'Pilih status ketersediaan yang valid.',
+            'image.*' => 'Foto harus berupa JPG, JPEG, PNG, atau WebP yang valid, maksimal 2 MB.',
+            'remove_image.*' => 'Pilihan hapus foto tidak valid.',
+            'img.*' => 'Gunakan input Foto Produk untuk mengunggah foto.',
         ];
     }
 

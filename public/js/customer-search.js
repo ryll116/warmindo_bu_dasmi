@@ -42,8 +42,11 @@
             option.setAttribute('role', 'option');
             option.setAttribute('aria-selected', 'false');
             const thumbnail = document.createElement('img');
-            thumbnail.src = dropdown.dataset.placeholder;
+            thumbnail.src = product.image_url || dropdown.dataset.placeholder;
             thumbnail.alt = '';
+            thumbnail.width = 40;
+            thumbnail.height = 40;
+            thumbnail.loading = 'lazy';
             const label = document.createElement('span');
             const start = product.name.toLocaleLowerCase('id-ID').indexOf(keyword);
             const highlight = document.createElement('mark');

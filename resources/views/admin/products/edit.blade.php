@@ -7,7 +7,7 @@
     <h1 class="h3 fw-bold mb-4">Edit Product</h1>
     <div class="card border-0 shadow-sm product-form">
         <div class="card-body p-4">
-            <form method="POST" action="{{ route('admin.products.update', $product) }}">
+            <form method="POST" enctype="multipart/form-data" action="{{ route('admin.products.update', $product) }}">
                 @csrf
                 @method('PUT')
                 @include('admin.products._form', ['submitLabel' => 'Simpan Perubahan'])
@@ -15,3 +15,7 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+    <script src="{{ asset('js/product-image.js') }}" defer></script>
+@endpush

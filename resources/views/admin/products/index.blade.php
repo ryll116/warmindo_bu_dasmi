@@ -37,6 +37,7 @@
                     @forelse ($products as $product)
                         <tr>
                             <td class="ps-4 product-name">
+                                <img src="{{ $product->imageUrl() }}" alt="Foto {{ $product->product_name }}" width="48" height="48" loading="lazy" class="rounded border mb-2" style="object-fit: cover">
                                 <div class="fw-semibold">{{ $product->product_name }}</div>
                                 <div class="small text-secondary">{{ $product->product_code }}</div>
                             </td>

@@ -42,6 +42,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin,kasir,su
         Route::get('/tables/{table}/qr', [TableQrController::class, 'show'])->name('tables.qr');
         Route::get('/tables/{table}/qr/download', [TableQrController::class, 'download'])->name('tables.qr.download');
         Route::patch('/products/{product}/availability', [ProductController::class, 'updateAvailability'])->name('products.availability');
+        Route::get('/products/next-code', [ProductController::class, 'nextCode'])->name('products.next-code');
         Route::resource('products', ProductController::class)->except('show');
     });
     Route::middleware('role:superAdmin')->group(function () {

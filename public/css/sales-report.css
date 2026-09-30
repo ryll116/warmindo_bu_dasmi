@@ -1,0 +1,139 @@
+.sales-report {
+    min-width: 0;
+    --report-border: #e4e9ef;
+}
+
+.sales-report .report-card {
+    min-width: 0;
+    border: 1px solid var(--report-border);
+    border-radius: 1rem;
+    box-shadow: 0 3px 12px rgb(24 34 52 / 4%);
+}
+
+.sales-report .card-body {
+    padding: 1.25rem;
+}
+
+.sales-report .report-kpi {
+    padding: 1.35rem 1.25rem;
+    border-top: 3px solid var(--kpi-accent);
+    background: linear-gradient(135deg, var(--kpi-tint), #fff 85%);
+}
+
+.report-kpi-green { --kpi-accent: #87c7a5; --kpi-tint: #edf8f1; }
+.report-kpi-blue { --kpi-accent: #94bce5; --kpi-tint: #eef5fc; }
+.report-kpi-amber { --kpi-accent: #e6c081; --kpi-tint: #fff7e9; }
+.report-kpi-purple { --kpi-accent: #b9a2d9; --kpi-tint: #f5f0fc; }
+
+.sales-report .report-kpi-label {
+    min-height: 2.5em;
+    margin-bottom: .75rem;
+    font-size: .85rem;
+    line-height: 1.4;
+    font-weight: 600;
+    color: #566477;
+}
+
+.sales-report .report-kpi-value {
+    font-size: clamp(1.35rem, 1.6vw, 1.85rem);
+    line-height: 1.25;
+    font-weight: 750;
+    letter-spacing: -.035em;
+    overflow-wrap: anywhere;
+    font-variant-numeric: tabular-nums;
+}
+
+.sales-report .report-filters .form-label {
+    margin-bottom: .45rem;
+    font-size: .85rem;
+    font-weight: 600;
+    color: #566477;
+}
+
+.sales-report .form-control,
+.sales-report .form-select,
+.sales-report .btn {
+    min-height: 44px;
+    border-radius: .65rem;
+}
+
+.sales-report .form-control,
+.sales-report .form-select {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.sales-report .report-resto-row {
+    padding-block: .65rem;
+}
+
+.sales-report .report-resto-row strong {
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.sales-report .report-progress {
+    height: .65rem;
+    border-radius: 999px;
+    background: #edf1f6;
+}
+
+.sales-report .report-progress .progress-bar {
+    border-radius: inherit;
+    background: #789dc9;
+}
+
+.sales-report .table {
+    --bs-table-border-color: #edf0f4;
+    font-size: .9rem;
+}
+
+.sales-report .table th {
+    color: #647185;
+    font-size: .75rem;
+    font-weight: 600;
+    vertical-align: middle;
+}
+
+.sales-report .report-summary-table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.sales-report .report-summary-table th:first-child { width: 40%; }
+.sales-report .report-summary-table th:nth-child(2) { width: 20%; }
+.sales-report .report-summary-table th:last-child { width: 40%; }
+
+.sales-report .report-summary-table td,
+.sales-report .report-summary-table th {
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    padding: .9rem .35rem;
+}
+
+.sales-report .table .text-end {
+    font-variant-numeric: tabular-nums;
+}
+
+.sales-report .table small {
+    margin-top: .25rem;
+    font-size: .78rem;
+    font-weight: 400;
+}
+
+.sales-report .report-payment-badge {
+    display: inline-block;
+    border-radius: .5rem;
+    padding: .3rem .55rem;
+    font-size: .78rem;
+    font-weight: 600;
+}
+
+.report-payment-cash { background: #edf7f1; color: #35654b; }
+.report-payment-qris_manual { background: #eef3fb; color: #3d5d86; }
+
+@media (max-width: 575.98px) {
+    .sales-report .card-body { padding: 1rem; }
+    .sales-report .report-kpi-label { min-height: 0; }
+    .sales-report .report-kpi-value { font-size: 1.75rem; }
+}

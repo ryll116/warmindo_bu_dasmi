@@ -58,7 +58,7 @@ class ProductCrudTest extends AdminDatabaseTestCase
         $payload = $this->payload();
         $this->post(route('admin.products.store'), $payload + ['id' => 999, 'created_at' => '2000-01-01'])
             ->assertRedirect(route('admin.products.index'))->assertSessionHas('success');
-        $this->assertDatabaseHas('products', $payload);
+        $this->assertDatabaseHas('products', array_replace($payload, ['product_code' => Category::findOrFail($payload['category_id'])->category_code.'-001']));
         $this->assertDatabaseMissing('products', ['id' => 999]);
     }
 
@@ -71,13 +71,14 @@ class ProductCrudTest extends AdminDatabaseTestCase
         $this->assertDatabaseHas('products', ['id' => $product->id] + $payload);
     }
 
-    public function test_duplicate_code_is_rejected_on_create_and_update(): void
+    public function test_submitted_code_is_ignored_on_create_and_cannot_change_existing_code(): void
     {
         $existing = Product::factory()->create();
         $other = Product::factory()->create();
         $payload = $this->payload(['product_code' => $existing->product_code]);
-        $this->post(route('admin.products.store'), $payload)->assertSessionHasErrors('product_code');
-        $this->put(route('admin.products.update', $other), $payload)->assertSessionHasErrors('product_code');
+        $this->post(route('admin.products.store'), $payload)->assertSessionHas('success');
+        $this->assertDatabaseHas('products', ['category_id' => $payload['category_id'], 'product_code' => Category::findOrFail($payload['category_id'])->category_code.'-001']);
+        $this->put(route('admin.products.update', $other), $payload)->assertSessionHas('success');
         $this->assertSame($other->product_code, $other->fresh()->product_code);
     }
 
@@ -93,8 +94,6 @@ class ProductCrudTest extends AdminDatabaseTestCase
     public static function invalidFields(): array
     {
         return [
-            'missing code' => ['product_code', ''],
-            'long code' => ['product_code', str_repeat('x', 256)],
             'missing name' => ['product_name', ''],
             'long name' => ['product_name', str_repeat('x', 256)],
             'unknown category' => ['category_id', 999999],
@@ -113,7 +112,7 @@ class ProductCrudTest extends AdminDatabaseTestCase
             ->assertRedirect(route('admin.products.create'));
         $this->get(route('admin.products.create'))
             ->assertOk()->assertSee('Price tidak boleh negatif.')
-            ->assertSee('value="PRD-TEST"', false)->assertSee('value="0" selected', false);
+            ->assertDontSee('value="PRD-TEST"', false)->assertSee('Pilih kategori terlebih dahulu')->assertSee('value="0" selected', false);
     }
 
     public function test_availability_can_be_set_in_both_directions_and_repeated_safely(): void
@@ -221,8 +220,8 @@ class ProductCrudTest extends AdminDatabaseTestCase
         $this->post(route('admin.products.store'), $payload)->assertSessionHas('success');
         $second = $this->payload(['product_code' => 'SECOND', 'product_name' => $payload['product_name']]);
         $this->post(route('admin.products.store'), $second)->assertSessionHas('success');
-        $this->assertDatabaseHas('products', $payload);
-        $this->assertDatabaseHas('products', $second);
+        $this->assertDatabaseHas('products', array_replace($payload, ['product_code' => Category::findOrFail($payload['category_id'])->category_code.'-001']));
+        $this->assertDatabaseHas('products', array_replace($second, ['product_code' => Category::findOrFail($second['category_id'])->category_code.'-001']));
         $this->assertDatabaseCount('products', 2);
     }
 

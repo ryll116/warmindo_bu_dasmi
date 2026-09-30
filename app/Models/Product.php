@@ -7,12 +7,18 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 #[Fillable(['product_code', 'category_id', 'resto_id', 'product_name', 'price', 'disc', 'is_available'])]
 class Product extends Model
 {
     use HasFactory;
+
+    public function imageUrl(): string
+    {
+        return $this->img ? Storage::disk('public')->url($this->img) : asset('images/product-placeholder.svg');
+    }
 
     protected function casts(): array
     {

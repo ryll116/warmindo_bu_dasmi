@@ -7,10 +7,14 @@
     <h1 class="h3 fw-bold mb-4">Tambah Product</h1>
     <div class="card border-0 shadow-sm product-form">
         <div class="card-body p-4">
-            <form method="POST" action="{{ route('admin.products.store') }}">
+            <form method="POST" enctype="multipart/form-data" action="{{ route('admin.products.store') }}">
                 @csrf
                 @include('admin.products._form', ['submitLabel' => 'Simpan Product'])
             </form>
         </div>
     </div>
 @endsection
+@push('scripts')
+    <script src="{{ asset('js/product-code.js') }}" defer></script>
+    <script src="{{ asset('js/product-image.js') }}" defer></script>
+@endpush

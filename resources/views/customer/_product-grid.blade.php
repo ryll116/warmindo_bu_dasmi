@@ -2,7 +2,7 @@
     @forelse ($products as $product)
         <article class="menu-product" data-product-id="{{ $product->id }}">
             <div class="product-image">
-                <img src="{{ asset('images/product-placeholder.svg') }}" alt="Ilustrasi menu, foto belum tersedia" width="240" height="240" loading="lazy" decoding="async">
+                <img src="{{ $product->imageUrl() }}" alt="{{ $product->img ? 'Foto '.$product->product_name : 'Ilustrasi menu, foto belum tersedia' }}" width="240" height="240" loading="lazy" decoding="async">
             </div>
             <div class="product-content">
                 <h2 class="product-title">{{ $product->product_name }}</h2>

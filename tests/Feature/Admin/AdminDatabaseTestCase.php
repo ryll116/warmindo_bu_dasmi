@@ -24,6 +24,7 @@ abstract class AdminDatabaseTestCase extends TestCase
         Schema::create('categories', function (Blueprint $table): void {
             $table->id();
             $table->text('category_name')->nullable();
+            $table->string('category_code', 3)->default('');
             $table->text('status')->nullable();
             $table->timestamps();
         });
@@ -32,6 +33,7 @@ abstract class AdminDatabaseTestCase extends TestCase
             $table->string('product_code');
             $table->foreignId('category_id')->constrained();
             $table->string('product_name');
+            $table->string('img', 255)->nullable();
             $table->decimal('price', 12, 2);
             $table->boolean('is_available')->default(true);
             $table->timestamps();

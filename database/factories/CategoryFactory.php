@@ -19,6 +19,7 @@ class CategoryFactory extends Factory
     {
         return [
             'category_name' => fake()->unique()->words(2, true),
+            'category_code' => fake()->unique()->regexify('[A-Z]{3}'),
             'status' => 'active',
         ];
     }

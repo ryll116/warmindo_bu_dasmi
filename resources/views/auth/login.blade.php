@@ -7,7 +7,7 @@
         <div class="card border-0 shadow-sm mx-auto" style="max-width: 440px">
             <div class="card-body p-4">
                 <h1 class="h3 fw-bold">Login Admin / Kasir</h1>
-                <p class="text-secondary">Masuk menggunakan akun Warmindo Anda.</p>
+                <p class="text-secondary">Masuk menggunakan akun Resto Anda.</p>
                 @if ($errors->any())
                     <div class="alert alert-danger" role="alert">{{ $errors->first() }}</div>
                 @endif

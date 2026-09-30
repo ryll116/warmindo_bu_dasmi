@@ -6,6 +6,17 @@
     <div class="alert alert-warning" role="alert">Belum ada resto. Siapkan data master resto terlebih dahulu sebelum menyimpan produk.</div>
 @endif
 <div class="row g-4">
+    <div class="col-12">
+        <label for="product-image" class="form-label">{{ $product->exists ? 'Ganti Foto Produk' : 'Foto Produk' }}</label>
+        <input type="file" id="product-image" name="image" accept="image/jpeg,image/png,image/webp" class="form-control @error('image') is-invalid @enderror" aria-describedby="product-image-help product-image-error">
+        <div class="form-text" id="product-image-help">Opsional. JPG, JPEG, PNG, atau WebP, maksimal 2 MB. Setelah validasi gagal, pilih ulang file foto.</div>
+        @error('image') <div class="invalid-feedback" id="product-image-error">{{ $message }}</div> @enderror
+        <img id="product-image-preview" src="{{ $product->imageUrl() }}" data-existing-src="{{ $product->imageUrl() }}" data-placeholder="{{ asset('images/product-placeholder.svg') }}" alt="Preview foto produk" width="160" height="160" class="rounded border mt-3" style="object-fit: cover">
+        <p id="product-image-feedback" class="small text-danger mt-2" role="status"></p>
+        @if ($product->exists && $product->img)
+            <div class="form-check mt-2"><input type="checkbox" id="remove-image" name="remove_image" value="1" class="form-check-input" @checked(old('remove_image'))><label for="remove-image" class="form-check-label">Hapus Foto</label></div>
+        @endif
+    </div>
     <div class="col-md-6">
         <label for="resto_id" class="form-label">Resto / Penyedia</label>
         <select id="resto_id" name="resto_id" class="form-select @error('resto_id') is-invalid @enderror" required aria-describedby="resto_id-error">
@@ -17,11 +28,6 @@
         @error('resto_id') <div class="invalid-feedback" id="resto_id-error">{{ $message }}</div> @enderror
     </div>
     <div class="col-md-6">
-        <label for="product_code" class="form-label">Product Code</label>
-        <input type="text" id="product_code" name="product_code" class="form-control @error('product_code') is-invalid @enderror" value="{{ old('product_code', $product->product_code) }}" maxlength="255" required aria-describedby="product_code-error">
-        @error('product_code') <div class="invalid-feedback" id="product_code-error">{{ $message }}</div> @enderror
-    </div>
-    <div class="col-md-6">
         <label for="category_id" class="form-label">Category</label>
         <select id="category_id" name="category_id" class="form-select @error('category_id') is-invalid @enderror" required aria-describedby="category_id-error">
             <option value="">Pilih kategori</option>
@@ -30,6 +36,11 @@
             @endforeach
         </select>
         @error('category_id') <div class="invalid-feedback" id="category_id-error">{{ $message }}</div> @enderror
+    </div>
+    <div class="col-md-6">
+        <label for="product_code" class="form-label">Product Code</label>
+        <input type="text" id="product_code" name="product_code" class="form-control" value="{{ $product->exists ? $product->product_code : '' }}" readonly placeholder="Pilih kategori terlebih dahulu" aria-describedby="product-code-help product-code-status" @if (! $product->exists) data-preview-url="{{ route('admin.products.next-code') }}" @endif>
+        <div class="small mt-1" id="product-code-status" role="status" aria-live="polite"></div>
     </div>
     <div class="col-12">
         <label for="product_name" class="form-label">Product Name</label>

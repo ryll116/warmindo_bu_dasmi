@@ -46,7 +46,7 @@ class ProductDiscountTest extends AdminDatabaseTestCase
             $this->assertSame($product->price, $product->fresh()->effectivePrice());
         }
         $this->post(route('admin.products.store'), array_replace($payload, ['product_code' => 'PROMO-NEW', 'disc' => '10']))->assertSessionHas('success');
-        $this->assertDatabaseHas('products', ['product_code' => 'PROMO-NEW', 'disc' => 10]);
+        $this->assertDatabaseHas('products', ['product_code' => $product->category->category_code.'-001', 'disc' => 10]);
         foreach ([-1, 100.01, '10.123', 'bad', [], null] as $disc) {
             $this->putJson(route('admin.products.update', $product), $payload + ['disc' => $disc])->assertUnprocessable()->assertJsonValidationErrors('disc');
         }

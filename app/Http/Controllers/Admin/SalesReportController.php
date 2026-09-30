@@ -59,7 +59,7 @@ class SalesReportController extends Controller
             $workbook = new Spreadsheet;
             try {
                 $sheet = $workbook->getActiveSheet()->setTitle('Sales Report');
-                $sheet->setCellValue('A1', 'Warmindo');
+                $sheet->setCellValue('A1', 'Baji Minasa & Jus Amerta');
                 $sheet->setCellValue('A2', 'Laporan Penjualan');
                 $sheet->setCellValue('A4', 'Periode');
                 $sheet->setCellValue('B4', $data['start']->format('d/m/Y').' - '.$data['end']->format('d/m/Y').' WIB');
@@ -68,24 +68,21 @@ class SalesReportController extends Controller
                 $sheet->setCellValueExplicit('B5', $restoName, DataType::TYPE_STRING);
                 $sheet->setCellValue('A6', 'Generated At');
                 $sheet->setCellValue('B6', now($data['timezone'])->format('d/m/Y H:i:s').' WIB');
-                $sheet->setCellValue('A7', 'Pencarian');
                 $sheet->setCellValueExplicit('B7', $data['search'], DataType::TYPE_STRING);
-                $sheet->setCellValue('A8', 'Data sebelum snapshot menggunakan penyedia saat backfill development; histori lama tidak dapat dipastikan.');
-                $sheet->setCellValue('A9', $data['restoId'] === null ? 'KPI omzet memakai total order; detail dan revenue resto memakai subtotal item.' : 'Revenue: subtotal item resto; rata-rata: revenue / transaksi distinct yang memuat resto.');
                 foreach (['Total Revenue' => $data['summary']->revenue, 'Transactions' => $data['summary']->transactions, 'Items Sold' => $data['itemCount'], 'Average Transaction' => $data['summary']->average] as $label => $value) {
-                    $row = 11 + array_search($label, ['Total Revenue', 'Transactions', 'Items Sold', 'Average Transaction']);
+                    $row = 7 + array_search($label, ['Total Revenue', 'Transactions', 'Items Sold', 'Average Transaction']);
                     $sheet->setCellValue('A'.$row, $label);
                     $sheet->setCellValue('B'.$row, (float) $value);
                 }
                 $currency = '"Rp" #,##0.00';
-                $sheet->getStyle('B11')->getNumberFormat()->setFormatCode($currency);
-                $sheet->getStyle('B14')->getNumberFormat()->setFormatCode($currency);
-                $sheet->fromArray(['Tanggal (WIB)', 'Customer', 'Meja', 'Resto', 'Produk', 'Qty', 'Harga', 'Subtotal', 'Metode Pembayaran'], null, 'A16');
+                $sheet->getStyle('B7')->getNumberFormat()->setFormatCode($currency);
+                $sheet->getStyle('B10')->getNumberFormat()->setFormatCode($currency);
+                $sheet->fromArray(['Tanggal (WIB)', 'Customer', 'Meja', 'Resto', 'Produk', 'Qty', 'Harga', 'Subtotal', 'Metode Pembayaran'], null, 'A12');
                 $details = (clone $data['items'])->join('orders', 'orders.id', '=', 'order_items.order_id')
                     ->leftJoin('tables', 'tables.id', '=', 'orders.table_id')
                     ->select('order_items.*', 'orders.payment_time', 'orders.customer_name', 'orders.payment_type', 'tables.table_no')
                     ->orderBy('orders.payment_time')->orderBy('orders.id')->orderBy('order_items.id');
-                $row = 17;
+                $row = 13;
                 foreach ($details->cursor() as $item) {
                     $date = CarbonImmutable::parse($item->payment_time, config('app.timezone'))->setTimezone($data['timezone']);
                     $sheet->setCellValue('A'.$row, Date::PHPToExcel($date));
@@ -97,18 +94,15 @@ class SalesReportController extends Controller
                     $sheet->setCellValue('H'.$row, (float) $item->subtotal);
                     $row++;
                 }
-                $lastRow = max(17, $row - 1);
-                $sheet->getStyle('A17:A'.$lastRow)->getNumberFormat()->setFormatCode('dd/mm/yyyy hh:mm');
-                $sheet->getStyle('G17:H'.$lastRow)->getNumberFormat()->setFormatCode($currency);
+                $lastRow = max(13, $row - 1);
+                $sheet->getStyle('A13:A'.$lastRow)->getNumberFormat()->setFormatCode('dd/mm/yyyy hh:mm');
+                $sheet->getStyle('G13:H'.$lastRow)->getNumberFormat()->setFormatCode($currency);
                 $sheet->getStyle('A1:I2')->getFont()->setBold(true);
-                $sheet->getStyle('A16:I16')->getFont()->setBold(true);
+                $sheet->getStyle('A12:I12')->getFont()->setBold(true);
                 foreach (['A' => 23, 'B' => 30, 'C' => 10, 'D' => 28, 'E' => 35, 'F' => 10, 'G' => 20, 'H' => 20, 'I' => 23] as $column => $width) {
                     $sheet->getColumnDimension($column)->setWidth($width);
                 }
-                $sheet->mergeCells('A8:I8')->mergeCells('A9:I9');
-                $sheet->getStyle('A8:A9')->getAlignment()->setWrapText(true);
-                $sheet->freezePane('A17');
-                $sheet->setAutoFilter('A16:I'.max(16, $row - 1));
+                $sheet->setAutoFilter('A12:I'.max(12, $row - 1));
                 (new Xlsx($workbook))->save('php://output');
             } finally {
                 $workbook->disconnectWorksheets();
