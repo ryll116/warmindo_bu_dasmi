@@ -20,7 +20,7 @@ class SalesReportRestoTest extends AdminDatabaseTestCase
         parent::setUp();
         Schema::drop('order_items');
         Schema::drop('orders');
-        foreach (['2026_09_12_065707_create_orders_table.php', '2026_09_13_124020_create_order_items_table.php', '2026_09_16_024730_add_customer_name_to_orders_table.php', '2026_09_23_030903_add_resto_snapshot_to_order_items_table.php'] as $migration) {
+        foreach (['2026_09_12_065707_create_orders_table.php', '2026_10_01_040631_add_queue_number_to_orders_table.php', '2026_10_01_041131_add_queue_date_to_orders_table.php', '2026_09_13_124020_create_order_items_table.php', '2026_09_16_024730_add_customer_name_to_orders_table.php', '2026_09_23_030903_add_resto_snapshot_to_order_items_table.php'] as $migration) {
             (require database_path('migrations/'.$migration))->up();
         }
         config(['app.timezone' => 'UTC']);
@@ -130,20 +130,20 @@ class SalesReportRestoTest extends AdminDatabaseTestCase
             try {
                 $sheet = $workbook->getSheetByName('Sales Report');
                 $this->assertNotNull($sheet);
-                $this->assertSame(17, $sheet->getHighestDataRow());
-                $this->assertSame(20000.0, (float) $sheet->getCell('B11')->getValue());
-                $this->assertSame(1, (int) $sheet->getCell('B12')->getValue());
-                $this->assertSame(2, (int) $sheet->getCell('B13')->getValue());
-                $this->assertSame(20000.0, (float) $sheet->getCell('B14')->getValue());
-                foreach (['B17' => '=Evan', 'C17' => '05', 'D17' => '=SUM(1,2)', 'E17' => '=1+1'] as $cell => $value) {
+                $this->assertSame(13, $sheet->getHighestDataRow());
+                $this->assertSame(20000.0, (float) $sheet->getCell('B7')->getValue());
+                $this->assertSame(1, (int) $sheet->getCell('B8')->getValue());
+                $this->assertSame(2, (int) $sheet->getCell('B9')->getValue());
+                $this->assertSame(20000.0, (float) $sheet->getCell('B10')->getValue());
+                foreach (['B13' => '=Evan', 'C13' => '05', 'D13' => '=SUM(1,2)', 'E13' => '=1+1'] as $cell => $value) {
                     $this->assertSame($value, $sheet->getCell($cell)->getValue());
                     $this->assertSame(DataType::TYPE_STRING, $sheet->getCell($cell)->getDataType());
                 }
-                $this->assertSame(DataType::TYPE_NUMERIC, $sheet->getCell('A17')->getDataType());
-                $this->assertSame(20000.0, (float) $sheet->getCell('H17')->getValue());
-                $this->assertSame(10000.0, (float) $sheet->getCell('G17')->getValue());
-                $this->assertSame('A17', $sheet->getFreezePane());
-                $this->assertSame('A16:I17', $sheet->getAutoFilter()->getRange());
+                $this->assertSame(DataType::TYPE_NUMERIC, $sheet->getCell('A13')->getDataType());
+                $this->assertSame(20000.0, (float) $sheet->getCell('H13')->getValue());
+                $this->assertSame(10000.0, (float) $sheet->getCell('G13')->getValue());
+                $this->assertNull($sheet->getFreezePane());
+                $this->assertSame('A12:I13', $sheet->getAutoFilter()->getRange());
             } finally {
                 $workbook->disconnectWorksheets();
             }
@@ -170,7 +170,7 @@ class SalesReportRestoTest extends AdminDatabaseTestCase
         try {
             file_put_contents($file, $export->streamedContent());
             $workbook = IOFactory::load($file);
-            $this->assertSame(32, $workbook->getActiveSheet()->getHighestDataRow());
+            $this->assertSame(28, $workbook->getActiveSheet()->getHighestDataRow());
             $workbook->disconnectWorksheets();
         } finally {
             unlink($file);

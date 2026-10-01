@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AttendanceReportController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\ManualOrderController;
 use App\Http\Controllers\Admin\OrderController;
@@ -10,9 +11,11 @@ use App\Http\Controllers\Admin\SalesReportController;
 use App\Http\Controllers\Admin\TableController;
 use App\Http\Controllers\Admin\TableQrController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\Auth\SessionController;
 use App\Http\Controllers\Customer\CheckoutController;
 use App\Http\Controllers\Customer\MenuController;
+use App\Http\Middleware\EnsureAttendanceEmployee;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -24,6 +27,12 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [SessionController::class, 'store'])->name('login.store');
 });
 Route::post('/logout', [SessionController::class, 'destroy'])->middleware('auth')->name('logout');
+
+Route::prefix('attendance')->name('attendance.')->middleware(['auth', EnsureAttendanceEmployee::class])->group(function () {
+    Route::get('/', [AttendanceController::class, 'index'])->name('index');
+    Route::post('/clock-in', [AttendanceController::class, 'clockIn'])->name('clock-in');
+    Route::post('/clock-out', [AttendanceController::class, 'clockOut'])->name('clock-out');
+});
 
 Route::get('/menu/{qr_token}', MenuController::class)->name('customer.menu');
 Route::post('/menu/{qr_token}/checkout/review', [CheckoutController::class, 'review'])->name('customer.checkout.review');
@@ -39,6 +48,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin,kasir,su
         Route::resource('tables', TableController::class)->except('show');
         Route::get('/reports/sales/export', [SalesReportController::class, 'export'])->name('reports.sales.export');
         Route::get('/reports/sales', SalesReportController::class)->name('reports.sales');
+        Route::get('/reports/attendance', AttendanceReportController::class)->name('reports.attendance');
         Route::get('/tables/{table}/qr', [TableQrController::class, 'show'])->name('tables.qr');
         Route::get('/tables/{table}/qr/download', [TableQrController::class, 'download'])->name('tables.qr.download');
         Route::patch('/products/{product}/availability', [ProductController::class, 'updateAvailability'])->name('products.availability');

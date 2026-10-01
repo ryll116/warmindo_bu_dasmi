@@ -7,6 +7,7 @@
     <p class="fw-semibold text-break">Nama Pemesan: {{ $order->customer_name ?: 'Nama belum tersedia' }}</p>
     <div class="card card-body border-0 shadow-sm mb-3">
         <dl class="row mb-0">
+            <dt class="col-sm-4">Nomor Antrian</dt><dd class="col-sm-8 fs-4 fw-bold">{{ $order->queue_label }}</dd>
             <dt class="col-sm-4">Waktu order</dt><dd class="col-sm-8">{{ $order->created_at?->copy()->setTimezone('Asia/Jakarta')->format('d/m/Y H:i') }} WIB</dd>
             <dt class="col-sm-4">Order status</dt><dd class="col-sm-8"><span class="badge text-bg-primary">{{ ucfirst($order->order_status) }}</span></dd>
             <dt class="col-sm-4">Payment status</dt><dd class="col-sm-8"><span class="badge {{ $order->payment_status === 'paid' ? 'text-bg-success' : 'text-bg-danger' }}">{{ strtoupper($order->payment_status) }}</span></dd>

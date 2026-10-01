@@ -7,10 +7,10 @@ use App\Http\Requests\Customer\CheckoutRequest;
 use App\Models\Order;
 use App\Models\Table;
 use App\OrderCreation;
+use App\OrderTransaction;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -51,13 +51,13 @@ class CheckoutController extends Controller
     public function store(CheckoutRequest $request, string $qr_token): RedirectResponse
     {
         try {
-            $order = DB::transaction(function () use ($request, $qr_token): Order {
+            $order = app(OrderTransaction::class)->run(function () use ($request, $qr_token): Order {
                 $table = $this->availableTable($qr_token, true);
                 $token = $request->validated('checkout_token');
                 $draft = $this->draft($request, $token, $table);
 
                 return $this->creation->create($table->id, $token, $draft['items'], $request->validated('customer_name'), $request->validated('payment_type'), $request->validated('notes'));
-            }, 3);
+            });
         } catch (ValidationException $exception) {
             throw $exception;
         } catch (Throwable $exception) {

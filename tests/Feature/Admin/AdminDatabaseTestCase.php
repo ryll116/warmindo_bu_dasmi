@@ -19,6 +19,10 @@ abstract class AdminDatabaseTestCase extends TestCase
 
         (require database_path('migrations/0001_01_01_000000_create_users_table.php'))->up();
         (require database_path('migrations/2026_09_17_023811_add_role_to_users_table.php'))->up();
+        (require database_path('migrations/2026_09_30_072405_create_attendances_table.php'))->up();
+        (require database_path('migrations/2026_09_30_073607_add_shift_type_to_users_table.php'))->up();
+        (require database_path('migrations/2026_09_30_073608_add_schedule_snapshot_to_attendances_table.php'))->up();
+        (require database_path('migrations/2026_09_30_091337_add_location_coordinates_to_attendances_table.php'))->up();
 
         // Test-only schema reflects master columns inspected in MySQL, without running migrations.
         Schema::create('categories', function (Blueprint $table): void {
@@ -51,6 +55,9 @@ abstract class AdminDatabaseTestCase extends TestCase
         });
         Schema::create('orders', function (Blueprint $table): void {
             $table->uuid('id')->primary();
+            $table->unsignedInteger('queue_number')->nullable();
+            $table->date('queue_date')->nullable();
+            $table->unique(['queue_date', 'queue_number'], 'orders_queue_date_number_unique');
             $table->foreignId('table_id')->constrained();
         });
         Schema::create('order_items', function (Blueprint $table): void {

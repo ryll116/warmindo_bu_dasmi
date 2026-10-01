@@ -16,6 +16,19 @@ body {
     padding: .8rem 1rem;
 }
 
+.sidebar-menu-link { display: flex; align-items: center; gap: .6rem; min-width: 0; }
+.sidebar-icon { width: 1.25rem; height: 1.25rem; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.sidebar-icon svg { display: block; }
+.sidebar-label { min-width: 0; overflow-wrap: break-word; }
+
+.management-submenu { border-left: 1px solid #3b4b62; }
+.admin-sidebar .management-submenu .nav-link { font-size: .85rem; padding: .7rem .65rem; }
+.management-chevron { flex-shrink: 0; transition: transform .2s ease; }
+.management-toggle[aria-expanded="true"] .management-chevron { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) {
+    .management-chevron { transition: none; }
+}
+
 .admin-sidebar .nav-link.active {
     background-color: #0d6efd;
 }
@@ -166,6 +179,9 @@ body {
         width: var(--admin-sidebar-width);
         display: flex;
         flex-direction: column;
+        transform: translateX(0) !important;
+        visibility: visible !important;
+        transition: transform .24s ease, visibility 0s !important;
     }
 
     .admin-sidebar .offcanvas-header {
@@ -179,5 +195,38 @@ body {
 
     .admin-main {
         margin-left: var(--admin-sidebar-width);
+        transition: margin-left .24s ease;
+    }
+
+    .manual-submit-bar {
+        transition: left .24s ease;
+    }
+
+    .sidebar-collapsed .admin-sidebar {
+        transform: translateX(-100%) !important;
+        visibility: hidden !important;
+        pointer-events: none;
+        transition: transform .24s ease, visibility 0s .24s !important;
+    }
+
+    .sidebar-collapsed .admin-main {
+        margin-left: 0;
+    }
+
+    .sidebar-collapsed .manual-submit-bar {
+        left: 0;
+    }
+
+    #sidebar-toggle[aria-expanded="true"] svg {
+        transform: scaleX(-1);
+    }
+}
+
+@media (min-width: 992px) and (prefers-reduced-motion: reduce) {
+    .admin-sidebar,
+    .sidebar-collapsed .admin-sidebar,
+    .admin-main,
+    .manual-submit-bar {
+        transition: none !important;
     }
 }

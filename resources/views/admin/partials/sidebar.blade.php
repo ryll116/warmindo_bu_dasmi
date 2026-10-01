@@ -9,38 +9,51 @@
             -ms-overflow-style: none;
             "
     >
-        <!-- <p class="small text-uppercase text-white-50 px-3 mt-2">Management</p> -->
         @php
             $user = auth()->user();
-        
-            if ($user->isSuperAdmin()) {
+            $managementMenus = [];
+
+            if ($user->isSuperAdmin() || $user->isAdmin()) {
                 $menus = [
                     'admin.reports.sales' => 'Laporan Penjualan',
+                    'admin.reports.attendance' => 'Laporan Absensi',
                     'admin.orders.index' => 'Kasir',
-                    'admin.categories.index' => 'Manajemen Kategori',
-                    'admin.products.index' => 'Manajemen Produk',
-                    'admin.tables.index' => 'Manajemen Table',
-                    'admin.users.index' => 'User Management',
                 ];
-            } elseif ($user->isAdmin()) {
-                $menus = [
-                    'admin.reports.sales' => 'Laporan Penjualan',
-                    'admin.orders.index' => 'Kasir',
+                $managementMenus = [
                     'admin.categories.index' => 'Manajemen Kategori',
                     'admin.products.index' => 'Manajemen Produk',
                     'admin.tables.index' => 'Manajemen Table',
                 ];
+                if ($user->isSuperAdmin()) {
+                    $managementMenus['admin.users.index'] = 'Manajemen User';
+                }
             } else {
                 $menus = [
                     'admin.orders.index' => 'Dashboard Kasir',
+                    'attendance.index' => 'Absensi Saya',
                 ];
             }
         @endphp
         <nav class="nav nav-pills flex-column gap-2" aria-label="Menu admin">
             @foreach ($menus as $route => $label)
                 @php($active = request()->routeIs(str_replace('.index', '.*', $route)))
-                <a href="{{ route($route) }}" class="nav-link {{ $active ? 'active' : 'text-white-50' }}" @if ($active) aria-current="page" @endif>{{ $label }}</a>
+                <a href="{{ route($route) }}" class="nav-link sidebar-menu-link {{ $active ? 'active' : 'text-white-50' }}" @if ($active) aria-current="page" @endif>@include('admin.partials.sidebar-icon', ['icon' => $route])<span class="sidebar-label">{{ $label }}</span></a>
             @endforeach
+            @if ($managementMenus)
+                @php($managementActive = request()->routeIs('admin.categories.*', 'admin.products.*', 'admin.tables.*', 'admin.users.*'))
+                <button type="button" class="nav-link management-toggle text-start d-flex align-items-center justify-content-between gap-2 {{ $managementActive ? 'text-white' : 'text-white-50' }}" data-bs-toggle="collapse" data-bs-target="#management-submenu" aria-expanded="{{ $managementActive ? 'true' : 'false' }}" aria-controls="management-submenu">
+                    <span class="sidebar-menu-link">@include('admin.partials.sidebar-icon', ['icon' => 'management'])<span class="sidebar-label">Management</span></span>
+                    <svg class="management-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                </button>
+                <div class="collapse {{ $managementActive ? 'show' : '' }}" id="management-submenu">
+                    <div class="management-submenu nav nav-pills flex-column gap-1 ms-3 ps-2">
+                        @foreach ($managementMenus as $route => $label)
+                            @php($active = request()->routeIs(str_replace('.index', '.*', $route)))
+                            <a href="{{ route($route) }}" class="nav-link sidebar-menu-link {{ $active ? 'active' : 'text-white-50' }}" @if ($active) aria-current="page" @endif>@include('admin.partials.sidebar-icon', ['icon' => $route])<span class="sidebar-label">{{ $label }}</span></a>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
         </nav>
         <div class="mt-auto pt-5 px-3 small text-white-50">Warmindo {{ auth()->user()->isAdmin() || auth()->user()->isSuperAdmin() ? 'Admin' : 'Kasir' }}</div>
     </div>

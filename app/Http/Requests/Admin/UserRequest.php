@@ -31,6 +31,7 @@ class UserRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user instanceof User ? $user : null)],
             'role' => ['required', Rule::in(['admin', 'kasir', 'superAdmin'])],
+            'shift_type' => ['nullable', Rule::in(array_keys(config('attendance.shifts')))],
             'password' => [$user instanceof User ? 'nullable' : 'required', 'string', 'max:255', 'confirmed', Password::min(8)],
         ];
     }

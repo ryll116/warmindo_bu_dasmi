@@ -11,6 +11,8 @@
 }
 
 .receipt-heading { text-align: center; margin-bottom: 4mm; }
+.receipt-queue { font-size: 26px; font-weight: 700; line-height: 1.2; }
+.receipt-queue-block { text-align: center; padding: 3mm 0; border-block: 1px dashed #000; break-inside: avoid; }
 .receipt h1 { font-size: 17px; margin: 0 0 2mm; font-weight: 700; }
 .receipt-heading p { margin: 0; }
 .receipt-details { display: grid; grid-template-columns: 22mm minmax(0, 1fr); gap: 1mm 2mm; margin: 3mm 0; }

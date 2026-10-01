@@ -13,6 +13,7 @@
             <h1>Baji Minasa</h1>
             <p>Struk Transaksi</p>
         </header>
+        <div class="receipt-queue-block"><div>NOMOR ANTRIAN</div><strong class="receipt-queue">{{ $order->queue_label }}</strong></div>
         <dl class="receipt-details">
             <dt>Waktu order</dt><dd>{{ $order->created_at?->copy()->setTimezone('Asia/Jakarta')->format('d/m/Y H:i') }} WIB</dd>
             <dt>Customer</dt><dd>{{ $order->customer_name ?: 'Nama belum tersedia' }}</dd>

@@ -148,7 +148,7 @@
         table.textContent = `Meja ${order.table}`;
         const reference = document.createElement('p');
         reference.className = 'fw-semibold text-break mb-2';
-        reference.textContent = order.customer_name;
+        reference.textContent = `${order.queue_label ?? '-'} • ${order.customer_name}`;
         toast.dataset.orderId = order.id;
         const summary = document.createElement('p');
         summary.textContent = `${order.quantity} item • Rp${currency.format(Number(order.total))}`;

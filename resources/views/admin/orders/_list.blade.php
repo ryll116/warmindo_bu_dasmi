@@ -6,6 +6,7 @@
                 <div class="card-body d-flex flex-column">
                     <header class="d-flex justify-content-between align-items-start gap-3 mb-3">
                         <div class="cashier-order-heading">
+                            <p class="fs-2 fw-bold text-primary mb-1" aria-label="Nomor antrian">{{ $order->queue_label }}</p>
                             <h2 class="h4 fw-bold mb-1">Meja {{ str_pad((string) $order->table?->table_no, 2, '0', STR_PAD_LEFT) }}</h2>
                             <p class="fw-semibold text-break mb-1">{{ $order->customer_name ?: 'Nama belum tersedia' }}</p>
                             <p class="small text-secondary mb-0">{{ $order->created_at?->copy()->setTimezone('Asia/Jakarta')->format('d/m/Y H:i') }} WIB</p>

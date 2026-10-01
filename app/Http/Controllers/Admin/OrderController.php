@@ -58,6 +58,7 @@ class OrderController extends Controller
                 ->map(fn (Order $order): array => [
                     'id' => $order->id,
                     'customer_name' => $order->customer_name ?: 'Nama belum tersedia',
+                    'queue_label' => $order->queue_label,
                     'table' => str_pad((string) $order->table?->table_no, 2, '0', STR_PAD_LEFT),
                     'quantity' => (int) $order->item_quantity,
                     'total' => $order->total,

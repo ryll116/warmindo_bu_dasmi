@@ -6,6 +6,7 @@
     <main id="checkout-success" class="menu-container py-5" style="max-width: 640px" data-token="{{ $table->qr_token }}" data-clear-cart="{{ $clearCart ? 'true' : 'false' }}">
         <h1 class="h4">Pesanan Berhasil</h1>
         <p>Pesanan berhasil dibuat.</p>
+        <div class="text-center border rounded p-3 my-3"><p class="text-secondary mb-1">Nomor Antrian</p><strong class="fs-1">{{ $order->queue_label }}</strong></div>
         @if ($order->payment_status === 'unpaid' && $order->payment_type !== 'qris_manual')
             <p class="text-secondary">Silakan melakukan pembayaran di kasir.</p>
         @endif

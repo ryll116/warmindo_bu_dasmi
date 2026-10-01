@@ -7,10 +7,23 @@ use App\Models\Product;
 use App\Models\Table;
 use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class CashierTest extends AdminDatabaseTestCase
 {
+    public function test_dashboard_keeps_attendance_navigation_without_card_or_query(): void
+    {
+        DB::enableQueryLog();
+        $this->get(route('admin.orders.index'))->assertOk()
+            ->assertSee('Absensi Saya')
+            ->assertDontSee('aria-label="Absensi hari ini"', false)
+            ->assertDontSee('js/attendance.js');
+        $queries = collect(DB::getQueryLog());
+        $this->assertFalse($queries->contains(fn (array $query): bool => str_contains($query['query'], 'attendances')));
+        DB::disableQueryLog();
+    }
+
     protected function setUp(): void
     {
         parent::setUp();

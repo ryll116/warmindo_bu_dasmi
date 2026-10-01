@@ -7,7 +7,6 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class OrderCreation
@@ -15,7 +14,7 @@ class OrderCreation
     /** @param array<int, array{product_id: int, quantity: int}> $items */
     public function create(int $tableId, string $token, array $items, string $customerName, ?string $paymentType = null, ?string $notes = null): Order
     {
-        return DB::transaction(function () use ($tableId, $token, $items, $customerName, $paymentType, $notes): Order {
+        return app(OrderTransaction::class)->run(function () use ($tableId, $token, $items, $customerName, $paymentType, $notes): Order {
             $table = Table::whereKey($tableId)->lockForUpdate()->first();
             if (! $table || ! $table->is_available) {
                 throw ValidationException::withMessages(['table_id' => 'Meja tidak tersedia. Pilih meja aktif.']);
@@ -37,6 +36,7 @@ class OrderCreation
             $order->payment_time = null;
             $order->id = $token;
             $order->table()->associate($table);
+            app(OrderQueue::class)->assign($order);
             $order->save();
             $total = 0;
             foreach ($lines as $line) {
@@ -56,7 +56,7 @@ class OrderCreation
             $order->save();
 
             return $order;
-        }, 3);
+        });
     }
 
     /**

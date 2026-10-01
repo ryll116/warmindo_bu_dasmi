@@ -6,14 +6,33 @@ namespace App\Models;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'role'])]
+#[Fillable(['name', 'email', 'password', 'role', 'shift_type'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
+    public const ATTENDANCE_EXEMPT_ROLES = ['admin', 'superAdmin'];
+
+    public function requiresAttendance(): bool
+    {
+        return ! in_array($this->role, self::ATTENDANCE_EXEMPT_ROLES, true);
+    }
+
+    public function scopeAttendanceRequired(Builder $query): Builder
+    {
+        return $query->whereNotIn('role', self::ATTENDANCE_EXEMPT_ROLES);
+    }
+
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(Attendance::class);
+    }
+
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 

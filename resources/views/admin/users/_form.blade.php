@@ -16,6 +16,16 @@
     @if ($user->is(auth()->user()))<p class="form-text">Role akun yang sedang digunakan tidak dapat diubah.</p>@endif
 </div>
 <div class="mb-3">
+    <label for="shift_type" class="form-label">Jadwal Kerja</label>
+    <select id="shift_type" name="shift_type" class="form-select">
+        <option value="">Belum diatur / tidak wajib absensi</option>
+        @foreach (config('attendance.shifts') as $value => $shift)
+            <option value="{{ $value }}" @selected(old('shift_type', $user->shift_type) === $value)>{{ $shift['label'] }} ({{ $shift['start'] }} – {{ $shift['end'] }})</option>
+        @endforeach
+    </select>
+    <p class="form-text">Atur jadwal sebelum pegawai melakukan absensi. Admin dan superAdmin tidak wajib absensi.</p>
+</div>
+<div class="mb-3">
     <label for="password" class="form-label">Password</label>
     <input type="password" id="password" name="password" class="form-control" minlength="8" maxlength="255" autocomplete="new-password" @required(! $user->exists)>
     <p class="form-text">Minimal 8 karakter. @if ($user->exists)Kosongkan untuk mempertahankan password lama.@endif</p>

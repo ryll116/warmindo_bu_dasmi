@@ -72,6 +72,9 @@ if (! Schema::hasTable('tables')) {
     });
     Schema::create('orders', function (Blueprint $table): void {
         $table->uuid('id')->primary();
+        $table->unsignedInteger('queue_number')->nullable();
+        $table->date('queue_date')->nullable();
+        $table->unique(['queue_date', 'queue_number'], 'orders_queue_date_number_unique');
         $table->foreignId('table_id')->constrained();
         $table->string('customer_name', 100)->nullable();
         $table->string('order_status')->default('pending');

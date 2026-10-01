@@ -20,6 +20,8 @@ class ReceiptTest extends AdminDatabaseTestCase
         Schema::drop('order_items');
         Schema::drop('orders');
         (require database_path('migrations/2026_09_12_065707_create_orders_table.php'))->up();
+        (require database_path('migrations/2026_10_01_040631_add_queue_number_to_orders_table.php'))->up();
+        (require database_path('migrations/2026_10_01_041131_add_queue_date_to_orders_table.php'))->up();
         (require database_path('migrations/2026_09_13_124020_create_order_items_table.php'))->up();
         (require database_path('migrations/2026_09_16_024730_add_customer_name_to_orders_table.php'))->up();
         (require database_path('migrations/2026_09_23_030903_add_resto_snapshot_to_order_items_table.php'))->up();
@@ -39,7 +41,7 @@ class ReceiptTest extends AdminDatabaseTestCase
         $this->actingAs(User::factory()->create(['role' => $role]));
         DB::enableQueryLog();
         $response = $this->get(route('admin.orders.receipt', $order))->assertOk()
-            ->assertSee('Warmindo Bu Dasmi')->assertSee('Evan')->assertDontSee('Customer lainnya')
+            ->assertSee('Baji Minasa')->assertSee('Evan')->assertDontSee('Customer lainnya')
             ->assertSee('05')->assertSee('17/09/2026 09:00 WIB')->assertSee('17/09/2026 09:05 WIB')
             ->assertSee(str_repeat('Indomie spesial ', 12))->assertSee('Es Teh')
             ->assertSee('2 × Rp15.000,25')->assertSee('Rp30.000,50')
