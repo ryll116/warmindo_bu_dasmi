@@ -33,6 +33,9 @@
                     'attendance.index' => 'Absensi Saya',
                 ];
             }
+            if ($user->isAdmin() || $user->isSuperAdmin() || $user->isKasir()) {
+                $menus['admin.inventory.index'] = 'Inventory';
+            }
         @endphp
         <nav class="nav nav-pills flex-column gap-2" aria-label="Menu admin">
             @foreach ($menus as $route => $label)

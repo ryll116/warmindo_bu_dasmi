@@ -17,6 +17,7 @@
                 <path d="M3 3h8l10 10-8 8L3 11V3Z"/><circle cx="7.5" cy="7.5" r="1"/>
                 @break
             @case('admin.products.index')
+            @case('admin.inventory.index')
                 <path d="m12 3 9 5v9l-9 5-9-5V8l9-5Zm-9 5 9 5 9-5m-9 5v9M7.5 5.5l9 5"/>
                 @break
             @case('admin.tables.index')

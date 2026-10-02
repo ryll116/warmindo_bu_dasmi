@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AttendanceReportController;
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\ManualOrderController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\OrderItemController;
@@ -41,6 +42,11 @@ Route::post('/menu/{qr_token}/checkout', [CheckoutController::class, 'store'])->
 Route::get('/menu/{qr_token}/orders/{order}/success', [CheckoutController::class, 'success'])->middleware('signed')->name('customer.checkout.success');
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin,kasir,superAdmin'])->group(function () {
+    Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
+    Route::post('/inventory/sessions', [InventoryController::class, 'open'])->name('inventory.open');
+    Route::post('/inventory/sessions/{session}/close', [InventoryController::class, 'close'])->name('inventory.close');
+    Route::post('/inventory/sessions/{session}/handover', [InventoryController::class, 'handover'])->name('inventory.handover');
+    Route::post('/inventory/movements', [InventoryController::class, 'movement'])->name('inventory.movement');
     Route::get('/', fn () => to_route(auth()->user()->isAdmin() ? 'admin.products.index' : 'admin.orders.index'))->name('home');
     Route::middleware('role:admin,superAdmin')->group(function () {
         Route::view('/dashboard', 'admin.placeholder', ['title' => 'Dashboard'])->name('dashboard');
